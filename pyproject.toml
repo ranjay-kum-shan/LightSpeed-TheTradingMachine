@@ -1,0 +1,59 @@
+[build-system]
+requires = ["hatchling>=1.27,<2"]
+build-backend = "hatchling.build"
+
+[project]
+name = "trading-bot"
+version = "0.1.0"
+description = "Safety-first systematic trading research and paper-trading system"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "pydantic>=2.12,<3",
+    "pyyaml>=6.0.2,<7",
+    "tzdata>=2025.2",
+]
+
+[project.scripts]
+trading-bot = "trading_bot.cli:main"
+
+[dependency-groups]
+dev = [
+    "hypothesis>=6.140,<7",
+    "mypy>=1.17,<2",
+    "pytest>=8.4,<9",
+    "pytest-cov>=6.2,<8",
+    "ruff>=0.12,<1",
+    "types-pyyaml>=6.0.12,<7",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/trading_bot"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "/CHARTER.md",
+    "/README.md",
+    "/configs",
+    "/docs",
+    "/pyproject.toml",
+    "/src",
+    "/tests",
+    "/uv.lock",
+]
+
+[tool.pytest.ini_options]
+addopts = "-ra --strict-config --strict-markers"
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["B", "E", "F", "I", "RUF", "SIM", "UP"]
+
+[tool.mypy]
+python_version = "3.12"
+strict = true
+files = ["src", "tests"]
