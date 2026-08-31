@@ -43,15 +43,15 @@
 | Measure | Current value | Authority |
 | --- | --- | --- |
 | Total registered tasks | 41 | Task Register below |
-| `DONE` | 7 | Completed Work below |
+| `DONE` | 8 | Completed Work below |
 | `IN_PROGRESS` | 0 | Active Claims below |
 | `READY` | 6 | Parallelization Map below |
 | `BLOCKED` | 9 | Blockers and Decisions below |
 | `BACKLOG` | 18 | Dependency sequencing below |
 | Active claims | 0 | `coordination/claims/` plus Active Claims below |
-| Items in review | 1 | Integration Queue below |
+| Items in review | 0 | Integration Queue below |
 | Open incidents | 0 | Incident records |
-| Baseline commit | `3fbc9a11f359ad6bc082b8ef2c6ae6cdbb7e424e` | CI-verified collaboration baseline |
+| Baseline commit | `4ba5111d53c33343112d97af1c492b7ac087dee4` | Reviewed and integrated baseline |
 | Git remote | `https://github.com/ranjay-kum-shan/LightSpeed-TheTradingMachine.git` | Git configuration |
 
 This file is the master task index, not the requirement authority. Requirement
@@ -100,25 +100,27 @@ appropriate prior state. Reopened work moves from `DONE` to `IN_REVIEW` or
 ## Current Baseline
 
 - Local `main` tracks the personal repository and is synchronized with the
-  collaboration baseline through commit `3fbc9a1`.
+  collaboration baseline through commit `3fbc9a1`; the reviewed working baseline
+  is now `4ba5111` and is not yet pushed.
 - GitHub CLI is authenticated as `ranjay-kum-shan`; repository write permission
   and a normal fast-forward push were verified under the personal account.
 - Parallel claims still require the project owner to appoint an ongoing
-  coordinator. Git setup and remote publication are no longer blockers.
+  coordinator. Until then one agent holds both the implementer and coordinator
+  roles, so master-tracker edits appear inside worker commits; this is disclosed
+  in each affected handoff.
 - The uploadable tree contains source, configuration, documentation, and tests;
   generated environments and caches are absent.
-- The last complete validation passed Ruff, strict mypy, and 211 tests at 100%
-  statement and branch coverage on Python 3.12 and 3.14.
+- The last complete validation passed Ruff, strict mypy across 28 files, and 378
+  tests at 100% statement and branch coverage.
 - The implemented code covers fail-closed configuration, the configuration CLI,
   canonical order values, UTC time normalization with clock and exchange-calendar
-  ports, the pure risk engine, operator kill assessment, and atomic heartbeat
-  health. Canonical reason codes and order lifecycle contracts
-  were independently approved and integrated in commit `84e869e`, and the time,
-  clock, and calendar contracts were reviewed and closed at commit `3fbc9a1`.
+  ports, canonical market-data schemas for instruments, bars, corporate actions,
+  and dataset manifests, the pure risk engine, operator kill assessment, and
+  atomic heartbeat health.
 - `DATA-003`, `RISK-002`, and `NFR-MNT-004` are marked `IMPLEMENTED`. No
   requirement is marked `VERIFIED` and no stage gate has passed.
-- No broker adapter, credential, network-order path, or real-money capability
-  exists.
+- No data ingestion, hashing, publication, broker adapter, credential,
+  network-order path, or real-money capability exists.
 
 ### Completed Subtasks
 
@@ -165,7 +167,6 @@ must be handed to the coordinator for integration.
 | TB-1006 | Storage | `src/trading_bot/storage/**`, matching tests | Own SQLite migrations and atomic persistence contracts |
 | TB-2004 | Watchdog | `src/trading_bot/operations/watchdog.py`, matching tests | No broker calls; use a cancellation port and fake only |
 | TB-2005 | Quality | Import-boundary and performance tests | Coordinate any production-code change separately |
-| TB-3002 | Data schemas | `src/trading_bot/data/models.py`, matching tests | Reuse canonical domain values and the TB-1004 time contracts; `src/trading_bot/data/__init__.py` is now shared |
 | TB-3003 | Calendar data | `src/trading_bot/data/calendars/**`, matching tests | Build on the delivered `ExchangeCalendar` port; `src/trading_bot/data/__init__.py` is now shared |
 | TB-5001 | Execution port | `src/trading_bot/execution/ports.py`, fakes, tests | No Alpaca SDK or credentials |
 
@@ -190,7 +191,7 @@ reconcile them before editing.
 
 | Order | Task | Branch or PR | Reviewer | Validation status | Conflict notes | Decision |
 | --- | --- | --- | --- | --- | --- | --- |
-| 1 | TB-3002 | `main` (sequential) | Two independent review agents | Two review cycles returned `CHANGES_REQUESTED`; after cycle-two remediation the gate is Ruff pass, strict mypy over 28 files, 377 tests, 100% statement and branch coverage, wheel built | `data/__init__.py` is shared with TB-3003 | `PENDING_REVIEW` |
+| - | None | - | - | - | - | Queue empty |
 
 The coordinator orders integration by dependency and shared-file risk, not by
 completion time. Downstream branches rebase or merge from the newly integrated
@@ -248,7 +249,7 @@ must not bypass an external blocker or introduce real credentials.
 | ID | Task | Requirements | Depends on | Status | Owner | Next acceptance boundary |
 | --- | --- | --- | --- | --- | --- | --- |
 | TB-3001 | Qualify historical and current data providers | DATA-001, DATA-006 | TB-0002 | `BLOCKED` | Unassigned | Approved source qualification record |
-| TB-3002 | Canonical instrument, bar, action, and manifest schemas | DATA-001, DATA-003, DATA-004 | TB-1003 | `IN_REVIEW` | GitHub Copilot (sequential) | EV-0018; awaiting review cycle three |
+| TB-3002 | Canonical instrument, bar, action, and manifest schemas | DATA-001, DATA-003, DATA-004 | TB-1003 | `DONE` | GitHub Copilot (sequential) | EV-0014 through EV-0019 |
 | TB-3003 | Exchange calendar, holidays, half-days, and DST fixtures | DATA-002, DATA-003 | TB-1004 | `READY` | Unassigned | Calendar boundary suite passes |
 | TB-3004 | Provider-specific availability and current-data freshness rule | DATA-007 | TB-3001, TB-3003 | `BLOCKED` | Unassigned | `available_at_utc` policy approved |
 | TB-3005 | Implement DV-001 through DV-012 | DATA-005 | TB-3002, TB-3003 | `BACKLOG` | Unassigned | One isolated failing fixture per rule |
@@ -303,6 +304,7 @@ must not bypass an external blocker or introduce real credentials.
 | TB-1003 | 31 August 2026 | Independent approval, EV-0007, EV-0008, commit `84e869e` | NFR-MNT-004 marked `IMPLEMENTED` |
 | TB-0006 | 31 August 2026 | Personal authentication, baseline adoption, and fast-forward push in EV-0010 | Parallel Git baseline established |
 | TB-1004 | 31 August 2026 | Independent review reproduction in EV-0013 and worker evidence EV-0012 | DATA-003 marked `IMPLEMENTED`; EXEC-006 unchanged |
+| TB-3002 | 31 August 2026 | Three independent review cycles closed by EV-0019 at commit `4ba5111` | No requirement promoted; DATA-001 and DATA-004 stay `SPECIFIED` pending TB-3005 and TB-3006 |
 
 ## Evidence Ledger
 
@@ -326,6 +328,7 @@ must not bypass an external blocker or introduce real credentials.
 | EV-0016 | 31 August 2026 | TB-3002 remediation | Nine findings fixed in code and tests, five disclosed as records or follow-ups; Ruff pass, strict mypy pass across 28 files, 347 tests pass at 100% statement and branch coverage; wheel rebuilt | `coordination/handoffs/TB-3002.md` |
 | EV-0017 | 31 August 2026 | TB-3002 independent review cycle two | `CHANGES_REQUESTED`; 0 Critical, 3 Major, 10 Minor; behavioural probes and mutation controls proved the cycle-one secret-guard fix was a net security regression and the rewritten boundary claim was false | `coordination/handoffs/TB-3002.md` |
 | EV-0018 | 31 August 2026 | TB-3002 cycle-two remediation | Secret guard rebuilt with an allowlist and restored fragments; two unsound rules removed rather than retuned; boundary claim replaced by an audited enumeration; Ruff pass, strict mypy pass across 28 files, 377 tests pass at 100% statement and branch coverage; wheel rebuilt | `coordination/handoffs/TB-3002.md` |
+| EV-0019 | 31 August 2026 | TB-3002 independent review cycle three | `APPROVE`; 0 Critical, 0 Major, 4 Minor; 38 credential-name probes all rejected, 59 benign-name probes with one known-open rejection, 6 of 7 mutations killed, tree restored and re-verified; final gate 378 tests at 100% statement and branch coverage | `coordination/handoffs/TB-3002.md` |
 
 Evidence records summarize a result; task records and handoffs must preserve the
 exact command, exit code, affected test names, and artefact identity needed for
@@ -363,3 +366,4 @@ review.
 | 31 August 2026 | Returned TB-3002 to implementation after independent review, then resubmitted it after remediation | GitHub Copilot | EV-0015 and EV-0016 |
 | 31 August 2026 | Recorded that this session holds both the implementer and coordinator roles, so master-tracker edits accompany worker commits until an ongoing coordinator is appointed | GitHub Copilot | TB-3002 review finding M3 |
 | 31 August 2026 | Returned TB-3002 to implementation a second time after an independent security regression finding, then resubmitted it | GitHub Copilot | EV-0017 and EV-0018 |
+| 31 August 2026 | Approved, integrated, and closed TB-3002 at commit `4ba5111`; recorded NEW-1 and NEW-4 as known-open; promoted no requirement | GitHub Copilot | EV-0019 |
