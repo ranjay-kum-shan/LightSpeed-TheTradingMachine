@@ -1,15 +1,24 @@
 """Canonical market-data schemas for instruments, bars, actions, and manifests.
 
 These values are the ``NORMALIZED`` stage of the dataset lifecycle, not the
-``VALIDATING`` stage. They refuse only what has no defined meaning; the twelve
-mandatory validation rules stay with the dataset validator so it can report and
-quarantine offending canonical rows.
+``VALIDATING`` stage. Two kinds of rule are enforced here and no others:
+
+1. Representational rules, without which the value has no defined meaning -
+   naive timestamps, non-finite numbers, malformed enums or currency codes, and
+   degenerate intervals.
+2. One safety rule: a bar may not claim availability before its own session
+   close. No ``DV-*`` rule covers availability ordering, so nothing downstream
+   would catch lookahead, and unlike a crossed high and low it cannot be
+   reviewed into acceptance.
+
+Everything else the twelve mandatory validation rules cover stays representable
+so the dataset validator can report and quarantine offending canonical rows.
 """
 
 import math
 import re
 from dataclasses import dataclass
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from decimal import Decimal
 from enum import StrEnum
 
@@ -17,12 +26,37 @@ from trading_bot.domain.time import ensure_utc
 
 CANONICAL_SCHEMA_VERSION = "1"
 
+_INT64_MIN = -(2**63)
+_INT64_MAX = 2**63 - 1
 _CURRENCY_PATTERN = re.compile(r"^[A-Z]{3}$")
 _SHA256_PATTERN = re.compile(r"^[0-9a-f]{64}$")
-_SECRET_KEY_PATTERN = re.compile(
-    r"secret|password|passwd|credential|authorization|bearer|signature"
-    r"|api[_-]?key|access[_-]?key|private[_-]?key|token",
-    re.IGNORECASE,
+_SEPARATORS = re.compile(r"[^0-9a-z]+")
+_SECRET_KEY_NAMES = frozenset(
+    {
+        "auth",
+        "bearer",
+        "jwt",
+        "key",
+        "pwd",
+        "sig",
+        "signature",
+        "token",
+        "accesstoken",
+        "idtoken",
+        "refreshtoken",
+        "sessiontoken",
+    }
+)
+_SECRET_KEY_FRAGMENTS = (
+    "accesskey",
+    "apikey",
+    "authorization",
+    "credential",
+    "passphrase",
+    "passwd",
+    "password",
+    "privatekey",
+    "secret",
 )
 
 
@@ -57,6 +91,19 @@ def _require_finite(value: float, field_name: str) -> float:
     return value
 
 
+def _require_finite_decimal(value: Decimal, field_name: str) -> Decimal:
+    # Comparing a Decimal NaN raises InvalidOperation, so this must run first.
+    if not value.is_finite():
+        raise ValueError(f"{field_name} must be a finite number")
+    return value
+
+
+def _require_int64(value: int, field_name: str) -> int:
+    if isinstance(value, bool) or not _INT64_MIN <= value <= _INT64_MAX:
+        raise ValueError(f"{field_name} must be an integer representable in 64 bits")
+    return value
+
+
 def _require_sorted_unique(values: tuple[str, ...], field_name: str) -> None:
     for value in values:
         _require_text(value, f"{field_name} entry")
@@ -64,6 +111,13 @@ def _require_sorted_unique(values: tuple[str, ...], field_name: str) -> None:
         raise ValueError(f"{field_name} must not contain duplicates")
     if list(values) != sorted(values):
         raise ValueError(f"{field_name} must be sorted")
+
+
+def _is_secret_key(key: str) -> bool:
+    normalized = _SEPARATORS.sub("", key.lower())
+    if normalized in _SECRET_KEY_NAMES:
+        return True
+    return any(fragment in normalized for fragment in _SECRET_KEY_FRAGMENTS)
 
 
 class DatasetType(StrEnum):
@@ -149,6 +203,7 @@ class DailyBar:
             ("adjusted_volume", self.adjusted_volume),
         ):
             _require_finite(field_value, field_name)
+        _require_int64(self.volume, "volume")
         object.__setattr__(self, "bar_open_utc", ensure_utc(self.bar_open_utc, "bar_open_utc"))
         object.__setattr__(self, "bar_close_utc", ensure_utc(self.bar_close_utc, "bar_close_utc"))
         object.__setattr__(
@@ -192,10 +247,14 @@ class CorporateAction:
         object.__setattr__(
             self, "available_at_utc", ensure_utc(self.available_at_utc, "available_at_utc")
         )
-        if self.ratio is not None and self.ratio <= 0:
-            raise ValueError("ratio must be positive when present")
-        if self.cash_amount is not None and self.cash_amount < 0:
-            raise ValueError("cash_amount must not be negative")
+        if self.ratio is not None:
+            _require_finite_decimal(self.ratio, "ratio")
+            if self.ratio <= 0:
+                raise ValueError("ratio must be positive when present")
+        if self.cash_amount is not None:
+            _require_finite_decimal(self.cash_amount, "cash_amount")
+            if self.cash_amount < 0:
+                raise ValueError("cash_amount must not be negative")
         if (self.cash_amount is None) != (self.currency is None):
             raise ValueError("currency must be present exactly when cash_amount is")
         if self.currency is not None:
@@ -210,7 +269,7 @@ class CorporateAction:
         if self.action_type is CorporateActionType.SYMBOL_CHANGE:
             if self.old_symbol is None or self.new_symbol is None:
                 raise ValueError("symbol change requires old_symbol and new_symbol")
-            if self.old_symbol == self.new_symbol:
+            if self.old_symbol.casefold() == self.new_symbol.casefold():
                 raise ValueError("symbol change requires different symbols")
 
 
@@ -254,17 +313,19 @@ class DatasetManifest:
             ("license_reference", self.license_reference),
         ):
             _require_text(field_value, field_name)
-        _require_sha256(self.source_hash, "source_hash")
+        _require_text(self.source_hash, "source_hash")
         _require_sha256(self.content_hash, "content_hash")
         object.__setattr__(
             self, "retrieved_at_utc", ensure_utc(self.retrieved_at_utc, "retrieved_at_utc")
         )
         if self.effective_start > self.effective_end:
             raise ValueError("effective_start must not be after effective_end")
+        # One day of slack because session dates are exchange-local, not UTC.
+        if self.effective_end > self.retrieved_at_utc.date() + timedelta(days=1):
+            raise ValueError("effective_end must not postdate retrieved_at_utc")
+        _require_int64(self.row_count, "row_count")
         if self.row_count < 0:
             raise ValueError("row_count must not be negative")
-        if not self.instrument_ids:
-            raise ValueError("instrument_ids must not be empty")
         _require_sorted_unique(self.instrument_ids, "instrument_ids")
         _require_sorted_unique(self.parent_dataset_ids, "parent_dataset_ids")
         if self.dataset_id in self.parent_dataset_ids:
@@ -273,9 +334,11 @@ class DatasetManifest:
 
     def _require_canonical_request(self) -> None:
         keys = tuple(key for key, _ in self.request_parameters)
-        for key in keys:
+        for key, value in self.request_parameters:
             _require_text(key, "request_parameters key")
-            # Shallow key-name guard only; the audit redaction boundary is separate.
-            if _SECRET_KEY_PATTERN.search(key):
+            if value != value.strip():
+                raise ValueError("request_parameters value must be trimmed")
+            # Key-name guard only; the audit redaction boundary is separate.
+            if _is_secret_key(key):
                 raise ValueError(f"request_parameters must not carry secret key {key!r}")
         _require_sorted_unique(keys, "request_parameters")

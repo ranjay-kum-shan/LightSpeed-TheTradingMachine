@@ -83,7 +83,7 @@ def make_action(**overrides: object) -> CorporateAction:
 def make_manifest(**overrides: object) -> DatasetManifest:
     fields: dict[str, object] = {
         "manifest_version": "1",
-        "dataset_id": "daily_bars-" + HASH_A,
+        "dataset_id": "daily_bars-" + HASH_B,
         "dataset_type": DatasetType.DAILY_BARS,
         "provider": "example-provider",
         "provider_dataset": "eod/daily",
@@ -234,6 +234,16 @@ def test_bar_leaves_validation_rule_violations_representable() -> None:
     assert crossed.volume == -1
 
 
+@pytest.mark.parametrize("bad_volume", [2**63, -(2**63) - 1, True])
+def test_bar_rejects_a_volume_outside_int64(bad_volume: int) -> None:
+    with pytest.raises(ValueError, match="volume must be an integer representable in 64 bits"):
+        make_bar(volume=bad_volume)
+
+
+def test_bar_accepts_the_int64_bounds() -> None:
+    assert make_bar(volume=2**63 - 1).volume == 2**63 - 1
+
+
 def test_action_normalizes_availability_and_keeps_local_dates() -> None:
     india = timezone(timedelta(hours=5, minutes=30))
     action = make_action(available_at_utc=CLOSE_UTC.astimezone(india))
@@ -264,6 +274,14 @@ def test_action_accepts_a_symbol_change() -> None:
     )
 
     assert (action.old_symbol, action.new_symbol) == ("OLD", "NEW")
+
+
+@pytest.mark.parametrize("field_name", ["ratio", "cash_amount"])
+@pytest.mark.parametrize("bad_value", [Decimal("NaN"), Decimal("Infinity"), Decimal("-Infinity")])
+def test_action_rejects_non_finite_decimals(field_name: str, bad_value: Decimal) -> None:
+    # A Decimal NaN raises InvalidOperation when compared, so finiteness runs first.
+    with pytest.raises(ValueError, match=f"{field_name} must be a finite number"):
+        make_action(**{field_name: bad_value})
 
 
 def test_action_accepts_absent_optional_dates() -> None:
@@ -312,6 +330,11 @@ def test_action_accepts_absent_optional_dates() -> None:
              "currency": None, "old_symbol": "SAME", "new_symbol": "SAME"},
             "symbol change requires different symbols",
         ),
+        (
+            {"action_type": CorporateActionType.SYMBOL_CHANGE, "cash_amount": None,
+             "currency": None, "old_symbol": "spy", "new_symbol": "SPY"},
+            "symbol change requires different symbols",
+        ),
     ],
 )
 def test_action_rejects_invalid_fields(overrides: dict[str, object], message: str) -> None:
@@ -333,17 +356,27 @@ def test_manifest_accepts_derived_lineage_and_an_empty_request() -> None:
         dataset_type=DatasetType.CALENDAR,
         parent_dataset_ids=("bars-" + HASH_A, "raw-" + HASH_B),
         request_parameters=(),
+        instrument_ids=(),
         row_count=0,
     )
 
     assert manifest.parent_dataset_ids[0] == "bars-" + HASH_A
     assert manifest.request_parameters == ()
+    # A calendar dataset is keyed by exchange, not by instrument.
+    assert manifest.instrument_ids == ()
 
 
-def test_manifest_records_a_failed_validation_without_publishing_it() -> None:
-    manifest = make_manifest(validation_result=ValidationResult.FAILED)
+def test_manifest_accepts_a_provider_supplied_source_digest() -> None:
+    manifest = make_manifest(source_hash="md5:9f86d0818")
 
-    assert manifest.validation_result is ValidationResult.FAILED
+    assert manifest.source_hash == "md5:9f86d0818"
+
+
+@pytest.mark.parametrize("result", list(ValidationResult))
+def test_manifest_retains_every_validation_result(result: ValidationResult) -> None:
+    manifest = make_manifest(validation_result=result)
+
+    assert manifest.validation_result is result
 
 
 @pytest.mark.parametrize(
@@ -359,8 +392,12 @@ def test_manifest_records_a_failed_validation_without_publishing_it() -> None:
         ({"adjustment_policy": ""}, "adjustment_policy must be a non-empty trimmed value"),
         ({"validation_report": ""}, "validation_report must be a non-empty trimmed value"),
         ({"license_reference": ""}, "license_reference must be a non-empty trimmed value"),
-        ({"source_hash": "A" * 64}, "source_hash must be a lowercase SHA-256 hexadecimal digest"),
+        ({"source_hash": ""}, "source_hash must be a non-empty trimmed value"),
         ({"content_hash": "abc"}, "content_hash must be a lowercase SHA-256 hexadecimal digest"),
+        (
+            {"content_hash": "A" * 64},
+            "content_hash must be a lowercase SHA-256 hexadecimal digest",
+        ),
         (
             {"retrieved_at_utc": datetime(2026, 3, 5, 21, 0)},
             "retrieved_at_utc must be timezone-aware",
@@ -369,12 +406,22 @@ def test_manifest_records_a_failed_validation_without_publishing_it() -> None:
             {"effective_start": date(2026, 3, 6)},
             "effective_start must not be after effective_end",
         ),
+        (
+            {"effective_end": date(2026, 3, 8)},
+            "effective_end must not postdate retrieved_at_utc",
+        ),
         ({"row_count": -1}, "row_count must not be negative"),
-        ({"instrument_ids": ()}, "instrument_ids must not be empty"),
+        ({"row_count": 2**63}, "row_count must be an integer representable in 64 bits"),
         ({"instrument_ids": ("",)}, "instrument_ids entry must be a non-empty trimmed value"),
+        ({"instrument_ids": (" A",)}, "instrument_ids entry must be a non-empty trimmed value"),
         ({"instrument_ids": ("B", "A")}, "instrument_ids must be sorted"),
         ({"instrument_ids": ("A", "A")}, "instrument_ids must not contain duplicates"),
         ({"parent_dataset_ids": ("B", "A")}, "parent_dataset_ids must be sorted"),
+        ({"parent_dataset_ids": ("A", "A")}, "parent_dataset_ids must not contain duplicates"),
+        (
+            {"parent_dataset_ids": (" A",)},
+            "parent_dataset_ids entry must be a non-empty trimmed value",
+        ),
     ],
 )
 def test_manifest_rejects_invalid_fields(overrides: dict[str, object], message: str) -> None:
@@ -391,17 +438,40 @@ def test_manifest_rejects_self_parentage() -> None:
 
 @pytest.mark.parametrize(
     "secret_key",
-    ["api_key", "apiKey", "access-key", "token", "authorization", "client_secret", "signature"],
+    [
+        "api_key",
+        "apiKey",
+        "access-key",
+        "key",
+        "token",
+        "access_token",
+        "authorization",
+        "client_secret",
+        "signature",
+        "pwd",
+        "sig",
+        "auth",
+        "jwt",
+        "passphrase",
+    ],
 )
 def test_manifest_rejects_secret_like_request_keys(secret_key: str) -> None:
     with pytest.raises(ValueError, match="must not carry secret key"):
         make_manifest(request_parameters=((secret_key, "redacted"),))
 
 
+@pytest.mark.parametrize("benign_key", ["page_token", "sort_key", "adjustment", "timeframe"])
+def test_manifest_accepts_benign_request_keys(benign_key: str) -> None:
+    manifest = make_manifest(request_parameters=((benign_key, "abc"),))
+
+    assert manifest.request_parameters == ((benign_key, "abc"),)
+
+
 @pytest.mark.parametrize(
     ("request_parameters", "message"),
     [
         ((("", "x"),), "request_parameters key must be a non-empty trimmed value"),
+        ((("symbol", " SPY "),), "request_parameters value must be trimmed"),
         ((("symbol", "SPY"), ("end", "2026-03-05")), "request_parameters must be sorted"),
         ((("symbol", "SPY"), ("symbol", "QQQ")), "request_parameters must not contain duplicates"),
     ],
