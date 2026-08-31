@@ -8,7 +8,7 @@ from datetime import datetime
 from enum import StrEnum
 from typing import Final
 
-from trading_bot.audit.redaction import PayloadValue, Redactor, is_secret_name
+from trading_bot.audit.redaction import PayloadValue, Redactor, ScanBudget, is_secret_name
 from trading_bot.config import OperatingMode
 from trading_bot.domain.reasons import ReasonCode
 from trading_bot.domain.time import ensure_utc
@@ -153,9 +153,10 @@ class AuditEvent:
 
 def serialize_event(event: AuditEvent, redactor: Redactor) -> str:
     """Render one redacted JSON Lines record, failing closed on a surviving secret."""
+    budget = ScanBudget()
 
     def text(value: str | None) -> str | None:
-        return None if value is None else redactor.redact_text(value)
+        return None if value is None else redactor.redact_text(value, budget)
 
     record: dict[str, PayloadValue] = {
         "schema_version": text(event.schema_version),
@@ -175,7 +176,7 @@ def serialize_event(event: AuditEvent, redactor: Redactor) -> str:
         "data_hash": text(event.data_hash),
         "strategy_id": text(event.strategy_id),
         "account_fingerprint": text(event.account_fingerprint),
-        "payload": redactor.redact(event.payload),
+        "payload": redactor.redact(event.payload, budget),
     }
     rendered = json.dumps(record, separators=(",", ":"), ensure_ascii=False, allow_nan=False)
     redactor.assert_clean(rendered)

@@ -6,13 +6,17 @@ per-event scan budget it cannot honour raises, and a known secret that survives
 redaction raises.
 
 Its pattern half is deliberately aggressive. A credential-named field masks its
-whole value to the end of the line or to the next true field separator, so a
-sub-delimited header such as ``Cookie`` cannot leak its later pairs, a quoted
-value cannot slip past, and an unrecognized authorization scheme cannot leave a
-credential beside a redaction marker. Masking a legitimate value such as
-``sort key: symbol`` is an accepted cost; a name containing non-ASCII characters
-is treated as a credential rather than normalized, which can mask non-English
-prose before a separator.
+whole value: a balanced ``[...]`` or ``{...}`` structure, a quoted string, a
+YAML block scalar, a value on the following line, or a bare run to the next
+field separator. A sub-delimited header such as ``Cookie`` therefore cannot leak
+its later pairs, and an unrecognized authorization scheme cannot leave a
+credential beside a redaction marker.
+
+The costs are accepted deliberately: ``sort key: symbol`` is masked, a name
+containing non-ASCII characters is treated as a credential rather than
+normalized, and a credential-named field with an empty value swallows the next
+line. Registering canaries with the redactor is the only complete guarantee;
+the name list cannot be exhaustive.
 """
 
 import re
@@ -32,6 +36,9 @@ _MAXIMUM_EVENT_LENGTH: Final = 128 * 1024
 _MAXIMUM_DEPTH: Final = 32
 _MAXIMUM_PROSE_WORD: Final = 12
 
+_VALUE_TERMINATORS: Final = "&,}]\r\n"
+_CLOSERS: Final = {"[": "]", "{": "}"}
+
 _SEPARATORS = re.compile(r"[^0-9a-z]+")
 _PRINTABLE_ASCII = re.compile(r"^[\x20-\x7e]*$")
 # Pagination cursors are not credentials even though they end in "token".
@@ -43,37 +50,54 @@ _ALLOWED_NAMES: Final = frozenset(
         "pagetoken",
     }
 )
-_SECRET_NAMES: Final = frozenset({"auth", "bearer", "jwt", "key", "nonce", "pass", "pwd", "sig"})
+_SECRET_NAMES: Final = frozenset(
+    {"auth", "bearer", "dsn", "jwt", "key", "nonce", "otp", "pass", "pem", "pwd", "salt", "sig",
+     "totp"}
+)
 _SECRET_FRAGMENTS: Final = (
     "accesskey",
     "apikey",
     "appkey",
     "authkey",
     "authorization",
+    "backupkey",
+    "clientkey",
+    "connectionstring",
     "consumerkey",
     "cookie",
     "credential",
+    "deploykey",
+    "encryptionkey",
+    "hmackey",
+    "keystore",
+    "kmskey",
+    "masterkey",
+    "mfacode",
     "passphrase",
     "passwd",
     "password",
     "privatekey",
+    "recoverycode",
     "secret",
     "sessionkey",
     "sharedkey",
+    "signingkey",
     "signature",
+    "sshkey",
     "subscriptionkey",
     "token",
+    "truststore",
+    "vaultkey",
+    "webhookkey",
 )
 
 # The name group accepts Unicode word characters so a homoglyph is captured and
-# then rejected by is_secret_name rather than silently splitting the name.
-# The value is a lookahead so an ordinary field such as "https:" cannot consume
-# a credential field that follows it. ";" is a sub-delimiter inside a header
-# value, not a field separator, so it does not terminate a masked value.
+# then rejected by is_secret_name rather than silently splitting the name. The
+# value is located in Python only when the name is a credential, which keeps the
+# scan linear on delimiter-dense input.
 _CREDENTIAL_FIELD = re.compile(
     r"(?P<name>[\w.\-%]{1,64})"
     r"(?P<sep>(?:\\?[\"']|\])?[ ]{0,16}(?:[=:]|%3[Dd])[ ]{0,16}|\t+)"
-    r"(?=(?P<value>[^&,}\]\r\n]*))"
 )
 # A bare scheme word with no field name.
 _AUTH_SCHEME = re.compile(
@@ -86,6 +110,19 @@ _URL_USERINFO = re.compile(r"(?P<prefix>://)(?P<userinfo>[^/\s@]{1,1024})(?P<at>
 
 class RedactionFailure(Exception):
     """Raised when a value cannot be safely recorded."""
+
+
+class ScanBudget:
+    """Bounds the total text one event may put through the scanner."""
+
+    def __init__(self, limit: int = _MAXIMUM_EVENT_LENGTH) -> None:
+        self._remaining = limit
+        self._limit = limit
+
+    def spend(self, amount: int) -> None:
+        self._remaining -= amount
+        if self._remaining < 0:
+            raise RedactionFailure(f"one event may not scan more than {self._limit} characters")
 
 
 def is_secret_name(name: str) -> bool:
@@ -107,20 +144,6 @@ def _is_secret_form(name: str) -> bool:
     return any(fragment in normalized for fragment in _SECRET_FRAGMENTS)
 
 
-class _Budget:
-    """Bounds the total text one event may put through the scanner."""
-
-    def __init__(self, limit: int) -> None:
-        self._remaining = limit
-
-    def spend(self, amount: int) -> None:
-        self._remaining -= amount
-        if self._remaining < 0:
-            raise RedactionFailure(
-                f"one event may not scan more than {_MAXIMUM_EVENT_LENGTH} characters"
-            )
-
-
 class Redactor:
     """Removes credentials from audit values and refuses unclassifiable ones."""
 
@@ -138,12 +161,14 @@ class Redactor:
     def known_secrets(self) -> tuple[str, ...]:
         return self._known_secrets
 
-    def redact_text(self, text: str) -> str:
+    def redact_text(self, text: str, budget: ScanBudget | None = None) -> str:
         if len(text) > _MAXIMUM_TEXT_LENGTH:
             raise RedactionFailure(
                 f"text longer than {_MAXIMUM_TEXT_LENGTH} characters must be summarized "
                 "before it can be recorded"
             )
+        if budget is not None:
+            budget.spend(len(text))
         for secret in self._known_secrets:
             text = text.replace(secret, REDACTED)
         text = _URL_USERINFO.sub(rf"\g<prefix>{REDACTED}\g<at>", text)
@@ -152,9 +177,9 @@ class Redactor:
         text = _redact_credential_fields(text)
         return _AUTH_SCHEME.sub(_redact_auth_scheme, text)
 
-    def redact(self, value: object) -> PayloadValue:
+    def redact(self, value: object, budget: ScanBudget | None = None) -> PayloadValue:
         """Return an allowlisted, redacted copy or raise for anything else."""
-        return self._redact(value, 0, _Budget(_MAXIMUM_EVENT_LENGTH))
+        return self._redact(value, 0, budget if budget is not None else ScanBudget())
 
     def assert_clean(self, rendered: str) -> None:
         """Fail closed if any known secret survived redaction."""
@@ -162,7 +187,7 @@ class Redactor:
             if secret in rendered:
                 raise RedactionFailure("a known secret survived redaction")
 
-    def _redact(self, value: object, depth: int, budget: _Budget) -> PayloadValue:
+    def _redact(self, value: object, depth: int, budget: ScanBudget) -> PayloadValue:
         if depth > _MAXIMUM_DEPTH:
             raise RedactionFailure(f"audit values may not nest deeper than {_MAXIMUM_DEPTH}")
         if value is None or isinstance(value, bool | int):
@@ -170,8 +195,7 @@ class Redactor:
         if isinstance(value, float):
             return self._require_finite(value)
         if isinstance(value, str):
-            budget.spend(len(value))
-            return self.redact_text(value)
+            return self.redact_text(value, budget)
         if isinstance(value, bytes | bytearray | memoryview):
             raise RedactionFailure("binary values are never recorded in audit evidence")
         if isinstance(value, Mapping):
@@ -184,14 +208,13 @@ class Redactor:
         )
 
     def _redact_mapping(
-        self, value: Mapping[object, object], depth: int, budget: _Budget
+        self, value: Mapping[object, object], depth: int, budget: ScanBudget
     ) -> dict[str, PayloadValue]:
         redacted: dict[str, PayloadValue] = {}
         for key, item in value.items():
             if not isinstance(key, str):
                 raise RedactionFailure("audit mapping keys must be strings")
-            budget.spend(len(key))
-            safe_key = self.redact_text(key)
+            safe_key = self.redact_text(key, budget)
             if safe_key in redacted:
                 # Silently dropping a record from append-only evidence is worse
                 # than refusing to write the event at all.
@@ -208,15 +231,85 @@ class Redactor:
         return value
 
 
+def _quoted_end(text: str, start: int) -> int:
+    quote = text[start]
+    index = start + 1
+    while index < len(text):
+        if text[index] == "\\":
+            index += 2
+            continue
+        if text[index] == quote:
+            return index + 1
+        index += 1
+    return len(text)
+
+
+def _structured_end(text: str, start: int) -> int:
+    stack: list[str] = []
+    index = start
+    while index < len(text):
+        char = text[index]
+        if char in "\"'":
+            index = _quoted_end(text, index)
+            continue
+        if char in _CLOSERS:
+            stack.append(_CLOSERS[char])
+        elif stack and char == stack[-1]:
+            stack.pop()
+            if not stack:
+                return index + 1
+        index += 1
+    return len(text)
+
+
+def _block_end(text: str, start: int) -> int:
+    """Consume a YAML block scalar or arrow value plus its indented remainder."""
+    index = text.find("\n", start)
+    if index == -1:
+        return len(text)
+    while index < len(text):
+        line_end = text.find("\n", index + 1)
+        if line_end == -1:
+            line_end = len(text)
+        line = text[index + 1 : line_end]
+        if line.strip() and not line[:1].isspace():
+            return index
+        index = line_end
+    return len(text)
+
+
+def _value_end(text: str, start: int) -> int:
+    index = start
+    while index < len(text) and text[index] in " \t\r\n":
+        index += 1
+    if index >= len(text):
+        return start
+    char = text[index]
+    if char in "\"'":
+        return _quoted_end(text, index)
+    if char in _CLOSERS:
+        return _structured_end(text, index)
+    if char in "|>":
+        return _block_end(text, index)
+    while index < len(text) and text[index] not in _VALUE_TERMINATORS:
+        index += 1
+    return index
+
+
 def _redact_credential_fields(text: str) -> str:
     parts: list[str] = []
     index = 0
     for match in _CREDENTIAL_FIELD.finditer(text):
         if match.start() < index or not is_secret_name(match.group("name")):
             continue
-        parts.append(text[index : match.end("sep")])
+        end = _value_end(text, match.end())
+        if end == match.end():
+            # An empty value would produce a marker that promises a redaction
+            # nothing performed, so leave the text alone instead.
+            continue
+        parts.append(text[index : match.end()])
         parts.append(REDACTED)
-        index = match.end("value")
+        index = end
     parts.append(text[index:])
     return "".join(parts)
 

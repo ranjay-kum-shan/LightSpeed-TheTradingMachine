@@ -296,11 +296,122 @@ def test_redaction_leaves_no_stray_delimiter() -> None:
     assert Redactor().redact_text("Authorization: NTLM abc12345") == f"Authorization: {REDACTED}"
 
 
+def test_redaction_is_idempotent() -> None:
+    once = Redactor().redact_text("api_key=REALSECRETVALUE123")
+
+    assert Redactor().redact_text(once) == once
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        '{"api_key":["a","REALSECRETVALUE123"]}',
+        '{"api_key":{"old":"a","new":"REALSECRETVALUE123"}}',
+        "headers={'X-Api-Key': ['v1', 'REALSECRETVALUE123']}",
+        '{"api_key": [1, 2, ["REALSECRETVALUE123"]]}',
+    ],
+)
+def test_redactor_masks_a_structured_credential_value_whole(text: str) -> None:
+    # Stopping at the first delimiter would mask the opening fragment and leave
+    # the credential intact beside the marker.
+    assert "REALSECRETVALUE123" not in Redactor().redact_text(text)
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "api_key:\n  REALSECRETVALUE123",
+        "api_key: >\n  REALSECRETVALUE123",
+        "api_key: |\n  REALSECRETVALUE123",
+        "X-Api-Key:\r\n  REALSECRETVALUE123",
+    ],
+)
+def test_redactor_masks_a_value_on_the_following_line(text: str) -> None:
+    assert "REALSECRETVALUE123" not in Redactor().redact_text(text)
+
+
+def test_redactor_emits_no_marker_for_an_absent_value() -> None:
+    # A marker would promise a redaction that nothing performed.
+    assert Redactor().redact_text("api_key=,symbol=SPY") == "api_key=,symbol=SPY"
+    assert Redactor().redact_text("api_key=  ") == "api_key=  "
+
+
+def test_redactor_honours_an_escaped_quote_inside_a_value() -> None:
+    redacted = Redactor().redact_text('api_key="a\\"REALSECRETVALUE123\\"b", symbol=SPY')
+
+    assert "REALSECRETVALUE123" not in redacted
+    assert "symbol=SPY" in redacted
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        'api_key="REALSECRETVALUE123',
+        "api_key=[REALSECRETVALUE123",
+        "api_key={'a': 'REALSECRETVALUE123'",
+    ],
+)
+def test_redactor_masks_an_unterminated_value_to_the_end(text: str) -> None:
+    assert "REALSECRETVALUE123" not in Redactor().redact_text(text)
+
+
+def test_redactor_ends_a_block_value_at_the_next_unindented_line() -> None:
+    redacted = Redactor().redact_text("api_key: |\n  REALSECRETVALUE123\nsymbol: SPY")
+
+    assert "REALSECRETVALUE123" not in redacted
+    assert redacted.endswith("symbol: SPY")
+
+
+@pytest.mark.parametrize(
+    "name",
+    [
+        "signing_key",
+        "encryption_key",
+        "master_key",
+        "hmac_key",
+        "kms_key",
+        "vault_key",
+        "client_key",
+        "deploy_key",
+        "ssh_key",
+        "webhook_key",
+        "backup_key",
+        "connection_string",
+        "keystore",
+        "truststore",
+        "dsn",
+        "pem",
+        "salt",
+        "otp",
+        "totp",
+        "mfa_code",
+        "recovery_code",
+    ],
+)
+def test_is_secret_name_flags_compound_credential_names(name: str) -> None:
+    assert is_secret_name(name) is True
+
+
 def test_redactor_refuses_an_event_beyond_the_scan_budget() -> None:
     payload = {f"note{index}": "a" * 8192 for index in range(32)}
 
     with pytest.raises(RedactionFailure, match="may not scan more than"):
         Redactor().redact(payload)
+
+
+def test_serializer_shares_one_scan_budget_across_every_field() -> None:
+    # Identity fields must draw on the same budget as the payload, or an event
+    # can scan far more than the documented bound.
+    big = "a" * 60_000
+    event = make_event(
+        component=big,
+        correlation_id=big,
+        git_revision=big,
+        payload={"note": big},
+    )
+
+    with pytest.raises(RedactionFailure, match="may not scan more than"):
+        serialize_event(event, Redactor())
 
 
 @pytest.mark.parametrize(

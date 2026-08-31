@@ -11,6 +11,7 @@ from trading_bot.audit.redaction import (
     PayloadValue,
     RedactionFailure,
     Redactor,
+    ScanBudget,
     is_secret_name,
 )
 
@@ -21,6 +22,7 @@ __all__ = [
     "PayloadValue",
     "RedactionFailure",
     "Redactor",
+    "ScanBudget",
     "Severity",
     "is_secret_name",
     "serialize_event",
