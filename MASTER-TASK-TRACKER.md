@@ -45,11 +45,11 @@
 | Total registered tasks | 41 | Task Register below |
 | `DONE` | 8 | Completed Work below |
 | `IN_PROGRESS` | 0 | Active Claims below |
-| `READY` | 6 | Parallelization Map below |
+| `READY` | 5 | Parallelization Map below |
 | `BLOCKED` | 9 | Blockers and Decisions below |
 | `BACKLOG` | 18 | Dependency sequencing below |
 | Active claims | 0 | `coordination/claims/` plus Active Claims below |
-| Items in review | 0 | Integration Queue below |
+| Items in review | 1 | Integration Queue below |
 | Open incidents | 0 | Incident records |
 | Baseline commit | `4ba5111d53c33343112d97af1c492b7ac087dee4` | Reviewed and integrated baseline |
 | Git remote | `https://github.com/ranjay-kum-shan/LightSpeed-TheTradingMachine.git` | Git configuration |
@@ -191,7 +191,7 @@ reconcile them before editing.
 
 | Order | Task | Branch or PR | Reviewer | Validation status | Conflict notes | Decision |
 | --- | --- | --- | --- | --- | --- | --- |
-| - | None | - | - | - | - | Queue empty |
+| 1 | TB-1005 | `main` (sequential) | Unassigned | Ruff pass, strict mypy over 32 files, 493 tests, 100% statement and branch coverage, wheel built | New package; no shared file except the tracker | `PENDING_REVIEW` |
 
 The coordinator orders integration by dependency and shared-file risk, not by
 completion time. Downstream branches rebase or merge from the newly integrated
@@ -231,7 +231,7 @@ must not bypass an external blocker or introduce real credentials.
 | TB-1002 | Fail-closed runtime config and redacted CLI | NFR-SAFE-001, NFR-MNT-002, RISK-006 | TB-1001 | `DONE` | Initial implementation | Config and CLI tests pass |
 | TB-1003 | Complete canonical domain values and reason-code registry | NFR-MNT-004 | TB-1002 | `DONE` | GitHub Copilot (sequential) | EV-0007 through EV-0009 |
 | TB-1004 | UTC clock port and deterministic test clock | DATA-003, EXEC-006 | TB-1001 | `DONE` | GitHub Copilot (sequential) | EV-0012 and EV-0013 |
-| TB-1005 | Structured audit schema and redaction boundary | AUD-001, NFR-SEC-004 | TB-1002 | `READY` | Unassigned | Schema and nested canary tests |
+| TB-1005 | Structured audit schema and redaction boundary | AUD-001, NFR-SEC-004 | TB-1002 | `IN_REVIEW` | GitHub Copilot (sequential) | EV-0020; awaiting review |
 | TB-1006 | SQLite migrations, transaction boundary, and atomic storage | STATE-001, NFR-REP-002 | TB-1001 | `READY` | Unassigned | Replayable migration and commit-failure tests |
 
 ### Work Package Two Risk and Control
@@ -329,6 +329,8 @@ must not bypass an external blocker or introduce real credentials.
 | EV-0017 | 31 August 2026 | TB-3002 independent review cycle two | `CHANGES_REQUESTED`; 0 Critical, 3 Major, 10 Minor; behavioural probes and mutation controls proved the cycle-one secret-guard fix was a net security regression and the rewritten boundary claim was false | `coordination/handoffs/TB-3002.md` |
 | EV-0018 | 31 August 2026 | TB-3002 cycle-two remediation | Secret guard rebuilt with an allowlist and restored fragments; two unsound rules removed rather than retuned; boundary claim replaced by an audited enumeration; Ruff pass, strict mypy pass across 28 files, 377 tests pass at 100% statement and branch coverage; wheel rebuilt | `coordination/handoffs/TB-3002.md` |
 | EV-0019 | 31 August 2026 | TB-3002 independent review cycle three | `APPROVE`; 0 Critical, 0 Major, 4 Minor; 38 credential-name probes all rejected, 59 benign-name probes with one known-open rejection, 6 of 7 mutations killed, tree restored and re-verified; final gate 378 tests at 100% statement and branch coverage | `coordination/handoffs/TB-3002.md` |
+| EV-0020 | 31 August 2026 | TB-1005 audit schema and redaction boundary | Ruff pass, strict mypy pass across 32 files, 493 tests pass at 100% statement and branch coverage; wheel contains the three audit modules; canaries proven absent across mapping, array, URL, header, and multiline carriers | `coordination/handoffs/TB-1005.md` |
+| EV-0021 | 31 August 2026 | Published baseline verification | Commits through `678fdf5` pushed to `origin/main`; CI run 33413279087 completed with conclusion `success` | GitHub Actions run 33413279087 |
 
 Evidence records summarize a result; task records and handoffs must preserve the
 exact command, exit code, affected test names, and artefact identity needed for
@@ -367,3 +369,5 @@ review.
 | 31 August 2026 | Recorded that this session holds both the implementer and coordinator roles, so master-tracker edits accompany worker commits until an ongoing coordinator is appointed | GitHub Copilot | TB-3002 review finding M3 |
 | 31 August 2026 | Returned TB-3002 to implementation a second time after an independent security regression finding, then resubmitted it | GitHub Copilot | EV-0017 and EV-0018 |
 | 31 August 2026 | Approved, integrated, and closed TB-3002 at commit `4ba5111`; recorded NEW-1 and NEW-4 as known-open; promoted no requirement | GitHub Copilot | EV-0019 |
+| 31 August 2026 | Published the reviewed baseline to `origin/main` and confirmed CI success on Python 3.12 and 3.14 | GitHub Copilot | EV-0021 |
+| 31 August 2026 | Started and submitted TB-1005 in documented sequential mode; no parallel claim asserted | GitHub Copilot | EV-0020 |
