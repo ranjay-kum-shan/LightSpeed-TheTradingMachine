@@ -18,6 +18,19 @@ AUDIT_SCHEMA_VERSION: Final = "1"
 # Stable dotted name, at least two segments, for example "decision.order.rejected".
 _EVENT_TYPE = re.compile(r"^[a-z][a-z0-9]*(\.[a-z0-9]+)+$")
 _DECISION_PREFIX: Final = "decision."
+# The contract requires a reason code for decisions, rejections, transitions,
+# and alerts; these final segments are how the other three are recognized.
+_REASONED_OUTCOMES: Final = frozenset(
+    {
+        "alerted",
+        "denied",
+        "failed",
+        "halted",
+        "mismatch",
+        "rejected",
+        "transitioned",
+    }
+)
 
 
 class Severity(StrEnum):
@@ -87,25 +100,34 @@ class AuditEvent:
             if is_secret_name(key):
                 raise ValueError(f"payload must not carry secret key {key!r}")
         self._require_scope_identity()
+        self._require_reason_code()
         self._require_decision_completeness()
 
     @property
     def is_decision(self) -> bool:
         return self.event_type.startswith(_DECISION_PREFIX)
 
+    @property
+    def needs_reason_code(self) -> bool:
+        return self.is_decision or self.event_type.rpartition(".")[2] in _REASONED_OUTCOMES
+
     def _require_scope_identity(self) -> None:
         if self.mode is OperatingMode.BACKTEST and self.run_id is None:
             raise ValueError("run_id is required for backtest events")
-        if (
-            self.mode in (OperatingMode.PAPER, OperatingMode.RECOVERY)
-            and self.session_id is None
-        ):
+        if self.mode in (OperatingMode.PAPER, OperatingMode.RECOVERY) and self.session_id is None:
             raise ValueError("session_id is required for session-scoped events")
+
+    def _require_reason_code(self) -> None:
+        if self.needs_reason_code and self.reason_code is None:
+            raise ValueError("reason_code is required for a decision, rejection, or alert")
 
     def _require_decision_completeness(self) -> None:
         if not self.is_decision:
             return
-        # AUD-001: a decision that cannot be traced back to its inputs is not evidence.
+        # AUD-001: a decision that cannot be traced back to its inputs is not
+        # evidence, in every mode including HALTED.
+        if self.run_id is None and self.session_id is None:
+            raise ValueError("run_id or session_id is required for a decision event")
         required = (
             ("strategy_id", self.strategy_id),
             ("git_revision", self.git_revision),
@@ -115,38 +137,36 @@ class AuditEvent:
         for field_name, field_value in required:
             if field_value is None:
                 raise ValueError(f"{field_name} is required for a decision event")
-        if self.reason_code is None:
-            raise ValueError("reason_code is required for a decision event")
         if not self.payload:
             raise ValueError("payload is required for a decision event")
 
 
 def serialize_event(event: AuditEvent, redactor: Redactor) -> str:
     """Render one redacted JSON Lines record, failing closed on a surviving secret."""
+
+    def text(value: str | None) -> str | None:
+        return None if value is None else redactor.redact_text(value)
+
     record: dict[str, PayloadValue] = {
         "schema_version": event.schema_version,
-        "event_id": redactor.redact_text(event.event_id),
+        "event_id": text(event.event_id),
         "event_type": event.event_type,
         "occurred_at_utc": event.occurred_at_utc.isoformat(),
         "recorded_at_utc": event.recorded_at_utc.isoformat(),
         "severity": event.severity.value,
         "mode": event.mode.value,
-        "session_id": event.session_id,
-        "run_id": event.run_id,
-        "correlation_id": event.correlation_id,
-        "component": event.component,
+        "session_id": text(event.session_id),
+        "run_id": text(event.run_id),
+        "correlation_id": text(event.correlation_id),
+        "component": text(event.component),
         "reason_code": None if event.reason_code is None else event.reason_code.value,
-        "git_revision": event.git_revision,
-        "config_hash": event.config_hash,
-        "data_hash": event.data_hash,
-        "strategy_id": event.strategy_id,
-        "account_fingerprint": (
-            None
-            if event.account_fingerprint is None
-            else redactor.redact_text(event.account_fingerprint)
-        ),
+        "git_revision": text(event.git_revision),
+        "config_hash": text(event.config_hash),
+        "data_hash": text(event.data_hash),
+        "strategy_id": text(event.strategy_id),
+        "account_fingerprint": text(event.account_fingerprint),
         "payload": redactor.redact(event.payload),
     }
-    rendered = json.dumps(record, separators=(",", ":"), ensure_ascii=False)
+    rendered = json.dumps(record, separators=(",", ":"), ensure_ascii=False, allow_nan=False)
     redactor.assert_clean(rendered)
     return rendered

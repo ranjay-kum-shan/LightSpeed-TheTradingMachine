@@ -136,6 +136,15 @@ def test_is_secret_name_allows_ordinary_names(name: str) -> None:
     assert is_secret_name(name) is False
 
 
+@pytest.mark.parametrize(
+    "name",
+    ["\u0430pi_key", "ap\u0456_key", "\uff41pi_key", "api\u200bkey", "api\tkey"],
+)
+def test_is_secret_name_treats_non_ascii_names_as_hostile(name: str) -> None:
+    # Normalization would erase the homoglyph and hide "apikey" behind "pikey".
+    assert is_secret_name(name) is True
+
+
 def test_redactor_rejects_a_too_short_known_secret() -> None:
     with pytest.raises(ValueError, match="at least 4 characters"):
         Redactor(known_secrets=("ab",))
@@ -195,6 +204,86 @@ def test_redactor_masks_an_authorization_scheme_value(scheme: str) -> None:
 
     assert "abc123.def456" not in redacted
     assert REDACTED in redacted
+
+
+@pytest.mark.parametrize(
+    "scheme",
+    ["NTLM", "Negotiate", "Signature", "AWS4-HMAC-SHA256", "SAS", "OAuth", "Hawk", "ApiKey"],
+)
+def test_redactor_masks_an_unrecognized_authorization_scheme(scheme: str) -> None:
+    # A masked scheme word beside an intact credential is worse than no marker.
+    redacted = Redactor().redact_text(f"Authorization: {scheme} REALSECRETVALUE123")
+
+    assert "REALSECRETVALUE123" not in redacted
+    assert REDACTED in redacted
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        '{"api_key": "REALSECRETVALUE123"}',
+        '{"api_key":"REALSECRETVALUE123"}',
+        'api_key="REALSECRETVALUE123"',
+        "api_key='REALSECRETVALUE123'",
+        "{'api_key': 'REALSECRETVALUE123'}",
+        '<cfg api_key="REALSECRETVALUE123"/>',
+        "api_key => REALSECRETVALUE123",
+        "Api-Key\tREALSECRETVALUE123",
+        "api_key%3DREALSECRETVALUE123",
+        "https://host/v2?pass=REALSECRETVALUE123",
+    ],
+)
+def test_redactor_masks_a_credential_field_in_any_shape(text: str) -> None:
+    redacted = Redactor().redact_text(text)
+
+    assert "REALSECRETVALUE123" not in redacted
+    assert REDACTED in redacted
+
+
+def test_redactor_keeps_the_contract_session_identifier() -> None:
+    # `session_id` is a first-class field of the event contract, so it is not
+    # treated as a credential; a web session token under that name is not caught.
+    assert is_secret_name("session_id") is False
+    assert Redactor().redact_text("session_id=session-1") == "session_id=session-1"
+
+
+def test_redactor_stops_at_the_query_delimiter() -> None:
+    redacted = Redactor().redact_text("https://host/v2?apikey=live-value&limit=5")
+
+    assert redacted == f"https://host/v2?apikey={REDACTED}&limit=5"
+
+
+def test_redactor_stops_at_the_json_delimiter() -> None:
+    redacted = Redactor().redact_text('{"api_key": "live", "symbol": "SPY"}')
+
+    assert "live" not in redacted
+    assert '"symbol": "SPY"' in redacted
+
+
+def test_redactor_refuses_text_beyond_the_scan_limit() -> None:
+    with pytest.raises(RedactionFailure, match="must be summarized"):
+        Redactor().redact_text("a" * (64 * 1024 + 1))
+
+
+def test_redactor_refuses_a_key_collision_created_by_redaction() -> None:
+    # Dropping a record from append-only evidence is worse than not writing it.
+    with pytest.raises(RedactionFailure, match="collides with another key"):
+        Redactor().redact({"api_key=aaa": 1, "api_key=bbb": 2})
+
+
+def test_redactor_refuses_nesting_beyond_the_depth_limit() -> None:
+    deep: dict[str, object] = {"leaf": 1}
+    for _ in range(40):
+        deep = {"level": deep}
+
+    with pytest.raises(RedactionFailure, match="may not nest deeper than"):
+        Redactor().redact(deep)
+
+
+@pytest.mark.parametrize("value", [float("nan"), float("inf"), float("-inf")])
+def test_redactor_refuses_non_finite_numbers(value: float) -> None:
+    with pytest.raises(RedactionFailure, match="non-finite numbers"):
+        Redactor().redact({"ratio": value})
 
 
 def test_redactor_masks_a_canary_inside_a_multiline_string() -> None:
@@ -348,6 +437,32 @@ def test_event_requires_neither_identity_when_halted() -> None:
     assert event.run_id is None
 
 
+def test_halted_decision_event_still_requires_run_or_session_identity() -> None:
+    with pytest.raises(ValueError, match="run_id or session_id is required"):
+        make_decision_event(mode=OperatingMode.HALTED, session_id=None)
+
+
+@pytest.mark.parametrize(
+    "event_type",
+    [
+        "risk.order.rejected",
+        "order.state.transitioned",
+        "control.kill.alerted",
+        "recon.position.mismatch",
+        "mode.live.denied",
+        "session.startup.halted",
+        "report.delivery.failed",
+    ],
+)
+def test_outcome_events_require_a_reason_code(event_type: str) -> None:
+    with pytest.raises(ValueError, match="reason_code is required"):
+        make_event(event_type=event_type)
+
+
+def test_ordinary_event_does_not_require_a_reason_code() -> None:
+    assert make_event().needs_reason_code is False
+
+
 def test_backtest_event_accepts_a_run_id() -> None:
     event = make_event(mode=OperatingMode.BACKTEST, session_id=None, run_id="run-1")
 
@@ -372,7 +487,7 @@ def test_non_decision_event_is_not_marked_as_a_decision() -> None:
         ("git_revision", "git_revision is required for a decision event"),
         ("config_hash", "config_hash is required for a decision event"),
         ("data_hash", "data_hash is required for a decision event"),
-        ("reason_code", "reason_code is required for a decision event"),
+        ("reason_code", "reason_code is required"),
     ],
 )
 def test_decision_event_requires_full_lineage(field_name: str, message: str) -> None:
@@ -438,6 +553,30 @@ def test_serialized_event_masks_canaries_in_every_carrier() -> None:
     assert CANARY not in rendered
     assert OTHER_CANARY not in rendered
     assert REDACTED in rendered
+
+
+@pytest.mark.parametrize(
+    "field_name",
+    [
+        "event_id",
+        "component",
+        "session_id",
+        "correlation_id",
+        "git_revision",
+        "config_hash",
+        "data_hash",
+        "strategy_id",
+        "account_fingerprint",
+    ],
+)
+def test_serializer_redacts_every_free_text_identity_field(field_name: str) -> None:
+    # Registered canaries are caught by the final scan; an unregistered secret
+    # in a credential-shaped value must still be masked by the pattern half.
+    rendered = serialize_event(
+        make_event(**{field_name: "api_key=REALSECRETVALUE123"}), Redactor()
+    )
+
+    assert "REALSECRETVALUE123" not in rendered
 
 
 def test_serialization_fails_closed_when_a_secret_would_survive() -> None:
