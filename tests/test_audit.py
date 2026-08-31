@@ -138,7 +138,7 @@ def test_is_secret_name_allows_ordinary_names(name: str) -> None:
 
 @pytest.mark.parametrize(
     "name",
-    ["\u0430pi_key", "ap\u0456_key", "\uff41pi_key", "api\u200bkey", "api\tkey"],
+    ["\u0430pi_key", "ap\u0456_key", "\uff41pi_key", "api\u200bkey", "api\tkey", "api%5Fkey"],
 )
 def test_is_secret_name_treats_non_ascii_names_as_hostile(name: str) -> None:
     # Normalization would erase the homoglyph and hide "apikey" behind "pikey".
@@ -191,9 +191,11 @@ def test_redactor_masks_a_url_query_secret_without_a_known_literal() -> None:
 def test_redactor_masks_url_userinfo() -> None:
     redactor = Redactor()
 
-    redacted = redactor.redact_text("https://user:supersecret@host/path")
-
-    assert redacted == f"https://user:{REDACTED}@host/path"
+    # The whole userinfo goes, because a bare token carries no colon and a
+    # username can itself identify the account.
+    assert redactor.redact_text("https://user:supersecret@host/path") == (
+        f"https://{REDACTED}@host/path"
+    )
 
 
 @pytest.mark.parametrize("scheme", ["Bearer", "bearer", "Basic", "Digest", "Token"])
@@ -216,6 +218,89 @@ def test_redactor_masks_an_unrecognized_authorization_scheme(scheme: str) -> Non
 
     assert "REALSECRETVALUE123" not in redacted
     assert REDACTED in redacted
+
+
+@pytest.mark.parametrize(
+    "scheme", ["Bearer", "Basic", "Digest", "Token", "Negotiate", "NTLM", "OAuth", "Hawk", "SAS"]
+)
+def test_redactor_masks_a_bare_scheme_with_no_field_name(scheme: str) -> None:
+    redacted = Redactor().redact_text(f"retrying with {scheme} REALSECRETVALUE123 now")
+
+    assert "REALSECRETVALUE123" not in redacted
+    assert REDACTED in redacted
+
+
+def test_redactor_masks_a_short_credential_containing_digits() -> None:
+    assert "sh0rt" not in Redactor().redact_text("X-Auth: NTLM sh0rt")
+
+
+def test_redactor_masks_a_credential_on_the_next_line() -> None:
+    assert "abc12345" not in Redactor().redact_text("X-Auth: Bearer\nabc12345")
+
+
+@pytest.mark.parametrize(
+    "prose",
+    [
+        "token bucket refill",
+        "basic checks passed",
+        "digest mismatch found",
+        "signature verification failed for order 42",
+    ],
+)
+def test_redactor_keeps_ordinary_prose_after_a_scheme_word(prose: str) -> None:
+    assert Redactor().redact_text(prose) == prose
+
+
+def test_redactor_masks_every_pair_in_a_sub_delimited_header() -> None:
+    # ";" separates pairs inside one header value, so it must not end the mask.
+    redacted = Redactor().redact_text(
+        "Cookie: theme=dark; sessionid=REALSECRETVALUE123; tz=UTC"
+    )
+
+    assert "REALSECRETVALUE123" not in redacted
+    assert redacted == f"Cookie: {REDACTED}"
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "\u0430pi_key=REALSECRETVALUE123",
+        "passw\u043erd=REALSECRETVALUE123",
+        "s\u0435cret=REALSECRETVALUE123",
+        "t\u03bfken=REALSECRETVALUE123",
+    ],
+)
+def test_redactor_masks_a_homoglyph_credential_field(text: str) -> None:
+    assert "REALSECRETVALUE123" not in Redactor().redact_text(text)
+
+
+@pytest.mark.parametrize(
+    "text",
+    [
+        "api_key     = REALSECRETVALUE123",
+        "api_key          :   REALSECRETVALUE123",
+        '{"body": "{\\"api_key\\": \\"REALSECRETVALUE123\\"}"}',
+        "https://REALSECRETVALUE123@github.com/owner/repo.git",
+        "api%5Fkey=REALSECRETVALUE123",
+        "api%5fkey=REALSECRETVALUE123",
+        "https://host/v2?api%5Fkey=REALSECRETVALUE123",
+        "credentials[api_key]=REALSECRETVALUE123",
+        "user[password]=REALSECRETVALUE123",
+    ],
+)
+def test_redactor_masks_awkward_credential_shapes(text: str) -> None:
+    assert "REALSECRETVALUE123" not in Redactor().redact_text(text)
+
+
+def test_redaction_leaves_no_stray_delimiter() -> None:
+    assert Redactor().redact_text("Authorization: NTLM abc12345") == f"Authorization: {REDACTED}"
+
+
+def test_redactor_refuses_an_event_beyond_the_scan_budget() -> None:
+    payload = {f"note{index}": "a" * 8192 for index in range(32)}
+
+    with pytest.raises(RedactionFailure, match="may not scan more than"):
+        Redactor().redact(payload)
 
 
 @pytest.mark.parametrize(
@@ -452,6 +537,11 @@ def test_halted_decision_event_still_requires_run_or_session_identity() -> None:
         "mode.live.denied",
         "session.startup.halted",
         "report.delivery.failed",
+        "risk.order.blocked",
+        "broker.link.stalled",
+        "order.intent.cancelled",
+        "risk.limit.breached",
+        "watchdog.control.triggered",
     ],
 )
 def test_outcome_events_require_a_reason_code(event_type: str) -> None:

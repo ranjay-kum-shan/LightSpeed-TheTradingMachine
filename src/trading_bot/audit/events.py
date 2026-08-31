@@ -22,13 +22,23 @@ _DECISION_PREFIX: Final = "decision."
 # and alerts; these final segments are how the other three are recognized.
 _REASONED_OUTCOMES: Final = frozenset(
     {
+        "aborted",
         "alerted",
+        "blocked",
+        "breached",
+        "cancelled",
         "denied",
+        "diverged",
+        "engaged",
+        "expired",
         "failed",
         "halted",
         "mismatch",
+        "refused",
         "rejected",
+        "stalled",
         "transitioned",
+        "triggered",
     }
 )
 
@@ -148,9 +158,9 @@ def serialize_event(event: AuditEvent, redactor: Redactor) -> str:
         return None if value is None else redactor.redact_text(value)
 
     record: dict[str, PayloadValue] = {
-        "schema_version": event.schema_version,
+        "schema_version": text(event.schema_version),
         "event_id": text(event.event_id),
-        "event_type": event.event_type,
+        "event_type": text(event.event_type),
         "occurred_at_utc": event.occurred_at_utc.isoformat(),
         "recorded_at_utc": event.recorded_at_utc.isoformat(),
         "severity": event.severity.value,

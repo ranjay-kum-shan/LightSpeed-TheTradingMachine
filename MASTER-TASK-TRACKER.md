@@ -191,7 +191,7 @@ reconcile them before editing.
 
 | Order | Task | Branch or PR | Reviewer | Validation status | Conflict notes | Decision |
 | --- | --- | --- | --- | --- | --- | --- |
-| 1 | TB-1005 | `main` (sequential) | Independent review agent | Cycle one `CHANGES_REQUESTED` on two Critical redaction escapes; after remediation Ruff pass, strict mypy over 32 files, 543 tests, 100% statement and branch coverage, wheel built | New package; no shared file except the tracker | `PENDING_REVIEW` |
+| 1 | TB-1005 | `main` (sequential) | Two independent review agents | Two cycles returned `CHANGES_REQUESTED` on redaction escapes; after cycle-two remediation Ruff pass, strict mypy over 32 files, 580 tests, 100% statement and branch coverage, wheel built | New package; no shared file except the tracker | `PENDING_REVIEW` |
 
 The coordinator orders integration by dependency and shared-file risk, not by
 completion time. Downstream branches rebase or merge from the newly integrated
@@ -231,7 +231,7 @@ must not bypass an external blocker or introduce real credentials.
 | TB-1002 | Fail-closed runtime config and redacted CLI | NFR-SAFE-001, NFR-MNT-002, RISK-006 | TB-1001 | `DONE` | Initial implementation | Config and CLI tests pass |
 | TB-1003 | Complete canonical domain values and reason-code registry | NFR-MNT-004 | TB-1002 | `DONE` | GitHub Copilot (sequential) | EV-0007 through EV-0009 |
 | TB-1004 | UTC clock port and deterministic test clock | DATA-003, EXEC-006 | TB-1001 | `DONE` | GitHub Copilot (sequential) | EV-0012 and EV-0013 |
-| TB-1005 | Structured audit schema and redaction boundary | AUD-001, NFR-SEC-004 | TB-1002 | `IN_REVIEW` | GitHub Copilot (sequential) | EV-0023; awaiting review cycle two |
+| TB-1005 | Structured audit schema and redaction boundary | AUD-001, NFR-SEC-004 | TB-1002 | `IN_REVIEW` | GitHub Copilot (sequential) | EV-0025; awaiting review cycle three |
 | TB-1006 | SQLite migrations, transaction boundary, and atomic storage | STATE-001, NFR-REP-002 | TB-1001 | `READY` | Unassigned | Replayable migration and commit-failure tests |
 
 ### Work Package Two Risk and Control
@@ -333,6 +333,8 @@ must not bypass an external blocker or introduce real credentials.
 | EV-0021 | 31 August 2026 | Published baseline verification | Commits through `678fdf5` pushed to `origin/main`; CI run 33413279087 completed with conclusion `success` | GitHub Actions run 33413279087 |
 | EV-0022 | 31 August 2026 | TB-1005 independent review cycle one | `CHANGES_REQUESTED`; 2 Critical, 7 Major, 6 Minor; adversarial probes showed quoted and JSON-shaped text was never redacted and eight authorization schemes rendered the redaction marker beside an intact credential; all six planted mutations were killed and the tree was restored clean | `coordination/handoffs/TB-1005.md` |
 | EV-0023 | 31 August 2026 | TB-1005 cycle-one remediation | Credential-field scanner replaces the pair pattern; every identity field redacted; input length, nesting depth, and non-finite numbers refused; decision identity and reason-code rules widened; non-ASCII names treated as hostile. Ruff pass, strict mypy pass across 32 files, 543 tests pass at 100% statement and branch coverage; a twenty-carrier escape probe found no escape and scan time is linear | `coordination/handoffs/TB-1005.md` |
+| EV-0024 | 31 August 2026 | TB-1005 independent review cycle two | `CHANGES_REQUESTED`; 1 Critical, 7 Major, 6 Minor; a credential-named header with a delimited list leaked every pair after the first, and a mutation proved the widened scheme list was untested dead code; 6 of 7 mutations killed and the tree restored clean | `coordination/handoffs/TB-1005.md` |
+| EV-0025 | 31 August 2026 | TB-1005 cycle-two remediation | Sub-delimited header values masked whole; Unicode names captured before rejection; per-event scan budget added; field rule ordered before the scheme rule; percent-encoded and bracketed names covered; whole URL userinfo masked; bare-scheme tests added. Ruff pass, strict mypy pass across 32 files, 580 tests pass at 100% statement and branch coverage | `coordination/handoffs/TB-1005.md` |
 
 Evidence records summarize a result; task records and handoffs must preserve the
 exact command, exit code, affected test names, and artefact identity needed for
@@ -374,3 +376,4 @@ review.
 | 31 August 2026 | Published the reviewed baseline to `origin/main` and confirmed CI success on Python 3.12 and 3.14 | GitHub Copilot | EV-0021 |
 | 31 August 2026 | Started and submitted TB-1005 in documented sequential mode; no parallel claim asserted | GitHub Copilot | EV-0020 |
 | 31 August 2026 | Returned TB-1005 to implementation after two Critical redaction escapes, then resubmitted it after remediation | GitHub Copilot | EV-0022 and EV-0023 |
+| 31 August 2026 | Returned TB-1005 a second time after a Critical header-list escape and an untested scheme table, then resubmitted it | GitHub Copilot | EV-0024 and EV-0025 |
