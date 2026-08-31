@@ -38,6 +38,8 @@ _MAXIMUM_PROSE_WORD: Final = 12
 
 _VALUE_TERMINATORS: Final = "&,}]\r\n"
 _CLOSERS: Final = {"[": "]", "{": "}"}
+_PEM_START: Final = "-----BEGIN"
+_PEM_END: Final = "-----END"
 
 _SEPARATORS = re.compile(r"[^0-9a-z]+")
 _PRINTABLE_ASCII = re.compile(r"^[\x20-\x7e]*$")
@@ -171,10 +173,11 @@ class Redactor:
             budget.spend(len(text))
         for secret in self._known_secrets:
             text = text.replace(secret, REDACTED)
-        text = _URL_USERINFO.sub(rf"\g<prefix>{REDACTED}\g<at>", text)
-        # Fields first: a credential-named field masks the scheme word too, so
-        # the scheme rule cannot leave a marker inside an already masked value.
+        # Fields first: a credential-named field masks the scheme word and any
+        # embedded URL too, so neither later rule can leave a marker inside a
+        # value the field rule would otherwise have masked whole.
         text = _redact_credential_fields(text)
+        text = _URL_USERINFO.sub(rf"\g<prefix>{REDACTED}\g<at>", text)
         return _AUTH_SCHEME.sub(_redact_auth_scheme, text)
 
     def redact(self, value: object, budget: ScanBudget | None = None) -> PayloadValue:
@@ -263,7 +266,7 @@ def _structured_end(text: str, start: int) -> int:
 
 
 def _block_end(text: str, start: int) -> int:
-    """Consume a YAML block scalar or arrow value plus its indented remainder."""
+    """Consume the rest of a wrapped value: its indented or blank continuation."""
     index = text.find("\n", start)
     if index == -1:
         return len(text)
@@ -276,6 +279,14 @@ def _block_end(text: str, start: int) -> int:
             return index
         index = line_end
     return len(text)
+
+
+def _pem_end(text: str, start: int) -> int:
+    marker = text.find(_PEM_END, start)
+    if marker == -1:
+        return len(text)
+    line_end = text.find("\n", marker)
+    return len(text) if line_end == -1 else line_end
 
 
 def _value_end(text: str, start: int) -> int:
@@ -291,8 +302,13 @@ def _value_end(text: str, start: int) -> int:
         return _structured_end(text, index)
     if char in "|>":
         return _block_end(text, index)
+    if text.startswith(_PEM_START, index):
+        return _pem_end(text, index)
     while index < len(text) and text[index] not in _VALUE_TERMINATORS:
         index += 1
+    # A value wrapped onto folded or indented continuation lines is one value.
+    if index < len(text) and text[index] in "\r\n":
+        return _block_end(text, index)
     return index
 
 

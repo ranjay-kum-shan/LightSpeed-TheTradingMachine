@@ -46,9 +46,9 @@ This matrix maps every product requirement to its owning specification, planned 
 | `BLOCKED` | External decision or dependency prevents implementation or verification |
 | `NOT_APPLICABLE` | Excluded by an accepted scoped decision with a linked rationale |
 
-**Current matrix state:** 58 requirements are `SPECIFIED`; DATA-003, RISK-002,
-and NFR-MNT-004 are `IMPLEMENTED`; none is `VERIFIED`. Verification remains
-reserved for a named release and gate evidence bundle.
+**Current matrix state:** 57 requirements are `SPECIFIED`; AUD-001, DATA-003,
+RISK-002, and NFR-MNT-004 are `IMPLEMENTED`; none is `VERIFIED`. Verification
+remains reserved for a named release and gate evidence bundle.
 
 ## Functional Traceability
 
@@ -123,7 +123,7 @@ reserved for a named release and gate evidence bundle.
 
 | Requirement | Owning specification | Planned verification | Gate | Status |
 |---|---|---|---|---|
-| AUD-001 | [Operations Runbook](08-operations-and-observability.md) | `T-AUD-DECISION-001` event schema and lineage | Stage 1 | `SPECIFIED` |
+| AUD-001 | [Operations Runbook](08-operations-and-observability.md) | [Audit tests](../tests/test_audit.py) lock the structured event schema, decision-log completeness for UTC time, run or session identity, strategy, revision, config hash, data hash, inputs, and reason code | Stage 1 | `IMPLEMENTED` |
 | AUD-002 | [Recordkeeping Plan](11-recordkeeping-and-compliance.md) | `T-AUD-FILL-002` complete order and fill export | Stage 1 | `SPECIFIED` |
 | AUD-003 | [Operations Runbook](08-operations-and-observability.md) | `T-AUD-DAILY-003` no-trade daily report | Stage 1 | `SPECIFIED` |
 | AUD-004 | [Operations Runbook](08-operations-and-observability.md) | `T-AUD-ALERT-004` each required event and two channels | Stage 4 | `SPECIFIED` |
@@ -193,10 +193,11 @@ Performance checks are initial operating budgets, not optimization mandates. Mea
 Documentation coverage is complete for the current 61 requirements.
 Implementation includes fail-closed mode configuration, the pure pre-trade risk
 engine, operator kill assessment, heartbeat health, canonical reason/order
-contracts, and UTC time normalization with clock and exchange-calendar ports.
-DATA-003, RISK-002, and NFR-MNT-004 are marked implemented; broader startup,
-broker, reconciliation, and release evidence remains incomplete. External
-blockers are:
+contracts, UTC time normalization with clock and exchange-calendar ports,
+canonical market-data schemas, and the structured audit schema with its
+redaction boundary. AUD-001, DATA-003, RISK-002, and NFR-MNT-004 are marked
+implemented; broader startup, broker, reconciliation, and release evidence
+remains incomplete. External blockers are:
 
 - Owner approval of Stage 0 scope, weekly capacity, and base currency.
 - Exact ETF and market-data provider selection.

@@ -324,10 +324,32 @@ def test_redactor_masks_a_structured_credential_value_whole(text: str) -> None:
         "api_key: >\n  REALSECRETVALUE123",
         "api_key: |\n  REALSECRETVALUE123",
         "X-Api-Key:\r\n  REALSECRETVALUE123",
+        "Cookie: theme=dark;\r\n sessionid=REALSECRETVALUE123;\r\n tz=UTC",
+        "Authorization: Basic\r\n REALSECRETVALUE123",
+        "access_token:\n  part-one\n  REALSECRETVALUE123",
+        "private_key:\n-----BEGIN RSA PRIVATE KEY-----\nREALSECRETVALUE123\n"
+        "-----END RSA PRIVATE KEY-----",
+        "private_key:\n-----BEGIN RSA PRIVATE KEY-----\nREALSECRETVALUE123",
     ],
 )
 def test_redactor_masks_a_value_on_the_following_line(text: str) -> None:
     assert "REALSECRETVALUE123" not in Redactor().redact_text(text)
+
+
+def test_redactor_ends_a_pem_block_after_its_end_marker() -> None:
+    redacted = Redactor().redact_text(
+        "private_key:\n-----BEGIN RSA PRIVATE KEY-----\nREALSECRETVALUE123\n"
+        "-----END RSA PRIVATE KEY-----\ncert_path: /etc/tls/cert.pem"
+    )
+
+    assert "REALSECRETVALUE123" not in redacted
+    assert redacted.endswith("cert_path: /etc/tls/cert.pem")
+
+
+def test_redactor_masks_a_connection_string_without_a_stray_delimiter() -> None:
+    redacted = Redactor().redact_text("connection_string: postgresql://svc:pw@db:5432/trading")
+
+    assert redacted == f"connection_string: {REDACTED}"
 
 
 def test_redactor_emits_no_marker_for_an_absent_value() -> None:
