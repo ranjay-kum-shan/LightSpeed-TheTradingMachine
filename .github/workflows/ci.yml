@@ -7,12 +7,24 @@ on:
 permissions:
   contents: read
 
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   quality:
     runs-on: windows-latest
     timeout-minutes: 15
+
+    strategy:
+      fail-fast: false
+      matrix:
+        # Lowest and highest interpreters allowed by requires-python.
+        python-version: ["3.12", "3.14"]
+
     env:
       UV_LINK_MODE: copy
+      UV_PYTHON: ${{ matrix.python-version }}
 
     steps:
       - name: Check out repository
@@ -25,7 +37,7 @@ jobs:
           version: "0.10.7"
 
       - name: Install Python
-        run: uv python install 3.14.3
+        run: uv python install ${{ matrix.python-version }}
 
       - name: Install locked dependencies
         run: uv sync --locked --dev
@@ -37,7 +49,7 @@ jobs:
         run: uv run mypy src tests
 
       - name: Test
-        run: uv run pytest -q
+        run: uv run pytest -q --cov --cov-report=term-missing
 
       - name: Build package
         run: uv build

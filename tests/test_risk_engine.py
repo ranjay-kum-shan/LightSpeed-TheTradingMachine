@@ -401,3 +401,87 @@ def test_approved_order_never_projects_short_or_over_leverage(
         assert decision.projected_position_quantity >= 0
         assert decision.projected_gross_exposure <= limits.max_gross_exposure
         assert decision.projected_leverage <= limits.max_leverage
+
+
+@pytest.mark.parametrize(
+    ("changes", "match"),
+    [
+        ({"allowed_symbols": frozenset()}, "allowed_symbols"),
+        ({"allowed_symbols": frozenset({"spy"})}, "allowed_symbols"),
+        ({"allowed_order_types": frozenset()}, "allowed_order_types"),
+        ({"allowed_time_in_force": frozenset()}, "allowed_time_in_force"),
+        ({"exchange_timezone": "Not/AZone"}, "exchange_timezone"),
+        ({"allowed_order_start": time(16, 0)}, "must not cross midnight"),
+        ({"allowed_order_end": time(9, 30)}, "must not cross midnight"),
+        ({"max_order_notional": Decimal("0")}, "max_order_notional"),
+        ({"max_order_quantity": Decimal("-1")}, "max_order_quantity"),
+        ({"max_gross_exposure": Decimal("NaN")}, "max_gross_exposure"),
+        ({"max_position_pct_equity": Decimal("1.5")}, "no greater than one"),
+        ({"max_drawdown_from_peak": Decimal("0")}, "max_drawdown_from_peak"),
+        ({"max_position_pct_adv": Decimal("2")}, "no greater than one"),
+        ({"max_open_positions": 0}, "max_open_positions"),
+        ({"max_orders_per_minute": 0}, "max_orders_per_minute"),
+        ({"max_data_age": timedelta(0)}, "max_data_age"),
+        ({"max_clock_offset": timedelta(seconds=-1)}, "max_clock_offset"),
+        ({"max_leverage": Decimal("2")}, "margin is disabled"),
+    ],
+)
+def test_risk_limits_reject_invalid_configuration(
+    changes: dict[str, Any],
+    match: str,
+) -> None:
+    with pytest.raises(ValueError, match=match):
+        replace(make_limits(), **changes)
+
+
+def test_risk_limits_allow_leverage_above_one_only_with_margin() -> None:
+    limits = replace(make_limits(), allow_margin=True, max_leverage=Decimal("2"))
+
+    assert limits.max_leverage == Decimal("2")
+
+
+@pytest.mark.parametrize(
+    ("changes", "match"),
+    [
+        ({"as_of_utc": datetime(2026, 8, 31, 14, 0)}, "as_of_utc"),
+        ({"market_data_as_of_utc": datetime(2026, 8, 30, 14, 0)}, "market_data_as_of_utc"),
+        ({"current_equity": Decimal("0")}, "current_equity"),
+        ({"session_start_equity": Decimal("-1")}, "session_start_equity"),
+        ({"high_water_equity": Decimal("NaN")}, "high_water_equity"),
+        ({"orders_last_minute": -1}, "orders_last_minute"),
+        (
+            {
+                "positions": (
+                    Position("SPY", Decimal("1"), Decimal("500")),
+                    Position("SPY", Decimal("2"), Decimal("500")),
+                )
+            },
+            "at most one row per symbol",
+        ),
+        (
+            {
+                "liquidity": (
+                    Liquidity("SPY", Decimal("1000")),
+                    Liquidity("SPY", Decimal("2000")),
+                )
+            },
+            "at most one row per symbol",
+        ),
+    ],
+)
+def test_risk_snapshot_rejects_invalid_state(changes: dict[str, Any], match: str) -> None:
+    with pytest.raises(ValueError, match=match):
+        replace(make_snapshot(), **changes)
+
+
+def test_missing_liquidity_is_reported_once_for_multiple_symbols() -> None:
+    snapshot = replace(
+        make_snapshot(),
+        positions=(Position("QQQ", Decimal("1"), Decimal("400")),),
+        liquidity=(),
+    )
+
+    decision = RiskEngine(make_limits()).evaluate(make_intent(), snapshot)
+
+    assert not decision.approved
+    assert decision.reason_codes.count(RiskReason.LIQUIDITY_MISSING) == 1

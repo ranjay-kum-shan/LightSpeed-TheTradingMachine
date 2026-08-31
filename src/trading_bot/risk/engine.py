@@ -152,6 +152,7 @@ class RiskEngine:
             ):
                 reasons.append(RiskReason.ADV)
 
+        # Deposits and withdrawals are not yet separated from trading PnL; TB-2003 owns that.
         daily_loss = max(
             Decimal(0),
             snapshot.session_start_equity - snapshot.current_equity,

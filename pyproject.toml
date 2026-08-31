@@ -46,6 +46,15 @@ include = [
 addopts = "-ra --strict-config --strict-markers"
 testpaths = ["tests"]
 
+[tool.coverage.run]
+branch = true
+omit = ["*/trading_bot/__main__.py"]
+source = ["trading_bot"]
+
+[tool.coverage.report]
+exclude_also = ["if TYPE_CHECKING:", "raise AssertionError"]
+show_missing = true
+
 [tool.ruff]
 line-length = 100
 target-version = "py312"

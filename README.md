@@ -46,7 +46,7 @@ The source review is the [Trading System Plan Review v2](docs/reference/trading-
 | Charter | Draft; Stage 0 not passed |
 | External order authorization | `PAPER_ONLY` |
 | Software implementation | Fail-closed config and CLI, canonical domain contracts, pure risk engine, operator kill assessment, and heartbeat health |
-| Automated checks | Ruff and strict mypy clean; 79 tests passing |
+| Automated checks | Ruff and strict mypy clean; 156 tests passing at 100% statement and branch coverage |
 | Reference ETF and data provider | Owner decision required |
 | Paper broker | Alpaca proposed; owner eligibility and terms confirmation required |
 | Real-money capability | Absent and unauthorized |
@@ -96,7 +96,7 @@ Future loss-tolerant capital, daily-loss, drawdown, tax, and account decisions a
 
 ## Implementation Commands
 
-Python 3.12 or newer is required. The current workspace is pinned to Python 3.14.3 and uses an isolated uv environment.
+Python 3.12 or newer is required. The current workspace is pinned to Python 3.14.3 and uses an isolated uv environment. CI runs this same gate on both Python 3.12 and 3.14, so the supported range stays proven rather than assumed.
 
 ```powershell
 uv sync --dev
@@ -107,6 +107,9 @@ uv run pytest -q
 $env:UV_LINK_MODE = "copy"
 uv build
 ```
+
+Add `--cov --cov-report=term-missing` to the pytest command to reproduce the
+branch-coverage report that CI publishes.
 
 The current command surface validates configuration only. It has no broker adapter, credential input, network order path, or real-money capability. Invalid or explicit `LIVE` configuration reports `HALTED` with a stable reason code.
 

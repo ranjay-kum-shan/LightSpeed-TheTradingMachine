@@ -107,7 +107,8 @@ appropriate prior state. Reopened work moves from `DONE` to `IN_REVIEW` or
   coordinator. Git setup and remote publication are no longer blockers.
 - The uploadable tree contains source, configuration, documentation, and tests;
   generated environments and caches are absent.
-- The last complete validation passed Ruff, strict mypy, and 79 tests.
+- The last complete validation passed Ruff, strict mypy, and 156 tests at 100%
+  statement and branch coverage on Python 3.12 and 3.14.
 - The implemented code covers fail-closed configuration, the configuration CLI,
   canonical order values, the pure risk engine, operator kill assessment, and
   atomic heartbeat health. Canonical reason codes and order lifecycle contracts
@@ -307,6 +308,7 @@ must not bypass an external blocker or introduce real credentials.
 | EV-0008 | 31 August 2026 | TB-1003 independent re-review | `APPROVE`; cycle-one findings resolved; command reproduction unavailable | `coordination/handoffs/TB-1003.md` |
 | EV-0009 | 31 August 2026 | TB-1003 local integration | Commit `84e869e27e9a5210fe3360494ace250530250a2e` created above remote baseline | Local Git history |
 | EV-0010 | 31 August 2026 | Personal GitHub synchronization | Active personal account and admin permission verified; `main` synchronized through `2c0bf4d`; CI run 33379734390 passed | `coordination/handoffs/TB-0006.md` |
+| EV-0011 | 31 August 2026 | Review remediation | `py.typed` marker shipped in wheel; supported range proven on Python 3.12 and 3.14; boundary-validator tests added; Ruff pass, strict mypy pass across 19 files, 156 tests pass at 100% statement and branch coverage | Commands in `README.md` |
 
 Evidence records summarize a result; task records and handoffs must preserve the
 exact command, exit code, affected test names, and artefact identity needed for
