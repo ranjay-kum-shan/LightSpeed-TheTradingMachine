@@ -46,9 +46,9 @@ This matrix maps every product requirement to its owning specification, planned 
 | `BLOCKED` | External decision or dependency prevents implementation or verification |
 | `NOT_APPLICABLE` | Excluded by an accepted scoped decision with a linked rationale |
 
-**Current matrix state:** 59 requirements are `SPECIFIED`; RISK-002 and
-NFR-MNT-004 are `IMPLEMENTED`; none is `VERIFIED`. Verification remains reserved
-for a named release and gate evidence bundle.
+**Current matrix state:** 58 requirements are `SPECIFIED`; DATA-003, RISK-002,
+and NFR-MNT-004 are `IMPLEMENTED`; none is `VERIFIED`. Verification remains
+reserved for a named release and gate evidence bundle.
 
 ## Functional Traceability
 
@@ -58,7 +58,7 @@ for a named release and gate evidence bundle.
 |---|---|---|---|---|
 | DATA-001 | [Market Data Specification](04-data-specification.md) | `T-DATA-INGEST-001` reference ETF schema and Parquet build | Stage 1 | `SPECIFIED` |
 | DATA-002 | [Market Data Specification](04-data-specification.md) | `T-DATA-CALENDAR-002` holidays and half-days | Stage 1 | `SPECIFIED` |
-| DATA-003 | [Market Data Specification](04-data-specification.md) | `T-DATA-TIME-003` naive rejection UTC and DST fixtures | Stage 1 | `SPECIFIED` |
+| DATA-003 | [Market Data Specification](04-data-specification.md) | [Time contract tests](../tests/test_domain_time.py) and [clock and calendar tests](../tests/test_clock_and_calendar.py) cover naive rejection, offset conversion, both daylight-saving transitions, ambiguous local time, and session identity | Stage 1 | `IMPLEMENTED` |
 | DATA-004 | [Market Data Specification](04-data-specification.md) | `T-DATA-MANIFEST-004` complete lineage and hash reload | Stage 1 | `SPECIFIED` |
 | DATA-005 | [Market Data Specification](04-data-specification.md) | `T-DATA-DV-005` isolated failure for each `DV-001` through `DV-012` | Stage 1 | `SPECIFIED` |
 | DATA-006 | [Market Data Specification](04-data-specification.md) | `T-DATA-REVISION-006` immutable changed overlap | Stage 2 | `SPECIFIED` |
@@ -192,8 +192,9 @@ Performance checks are initial operating budgets, not optimization mandates. Mea
 
 Documentation coverage is complete for the current 61 requirements.
 Implementation includes fail-closed mode configuration, the pure pre-trade risk
-engine, operator kill assessment, heartbeat health, and canonical reason/order
-contracts. RISK-002 and NFR-MNT-004 are marked implemented; broader startup,
+engine, operator kill assessment, heartbeat health, canonical reason/order
+contracts, and UTC time normalization with clock and exchange-calendar ports.
+DATA-003, RISK-002, and NFR-MNT-004 are marked implemented; broader startup,
 broker, reconciliation, and release evidence remains incomplete. External
 blockers are:
 

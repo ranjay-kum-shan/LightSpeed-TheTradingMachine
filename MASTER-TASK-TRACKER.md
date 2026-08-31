@@ -35,7 +35,7 @@
 **Coordinator:** `GitHub Copilot (sequential session only)`  
 **Current authorization:** `PAPER_ONLY`  
 **Current gate:** Stage 0 not passed  
-**Requirement state:** 59 `SPECIFIED`, 2 `IMPLEMENTED`, 0 `VERIFIED`  
+**Requirement state:** 58 `SPECIFIED`, 3 `IMPLEMENTED`, 0 `VERIFIED`  
 **Parallel execution state:** `BASELINE_SYNCED_COORDINATOR_APPOINTMENT_REQUIRED`
 
 ## Control Panel
@@ -43,15 +43,15 @@
 | Measure | Current value | Authority |
 | --- | --- | --- |
 | Total registered tasks | 41 | Task Register below |
-| `DONE` | 6 | Completed Work below |
+| `DONE` | 7 | Completed Work below |
 | `IN_PROGRESS` | 0 | Active Claims below |
-| `READY` | 6 | Parallelization Map below |
+| `READY` | 7 | Parallelization Map below |
 | `BLOCKED` | 9 | Blockers and Decisions below |
-| `BACKLOG` | 19 | Dependency sequencing below |
+| `BACKLOG` | 18 | Dependency sequencing below |
 | Active claims | 0 | `coordination/claims/` plus Active Claims below |
-| Items in review | 1 | Integration Queue below |
+| Items in review | 0 | Integration Queue below |
 | Open incidents | 0 | Incident records |
-| Baseline commit | `2c0bf4d75fc74e701287b3c2701ec3a2a796695d` | CI-verified collaboration baseline |
+| Baseline commit | `3fbc9a11f359ad6bc082b8ef2c6ae6cdbb7e424e` | CI-verified collaboration baseline |
 | Git remote | `https://github.com/ranjay-kum-shan/LightSpeed-TheTradingMachine.git` | Git configuration |
 
 This file is the master task index, not the requirement authority. Requirement
@@ -100,7 +100,7 @@ appropriate prior state. Reopened work moves from `DONE` to `IN_REVIEW` or
 ## Current Baseline
 
 - Local `main` tracks the personal repository and is synchronized with the
-  collaboration baseline through commit `2c0bf4d`.
+  collaboration baseline through commit `3fbc9a1`.
 - GitHub CLI is authenticated as `ranjay-kum-shan`; repository write permission
   and a normal fast-forward push were verified under the personal account.
 - Parallel claims still require the project owner to appoint an ongoing
@@ -113,9 +113,10 @@ appropriate prior state. Reopened work moves from `DONE` to `IN_REVIEW` or
   canonical order values, UTC time normalization with clock and exchange-calendar
   ports, the pure risk engine, operator kill assessment, and atomic heartbeat
   health. Canonical reason codes and order lifecycle contracts
-  were independently approved and integrated in commit `84e869e`.
-- `RISK-002` and `NFR-MNT-004` are marked `IMPLEMENTED`. No requirement is
-  marked `VERIFIED` and no stage gate has passed.
+  were independently approved and integrated in commit `84e869e`, and the time,
+  clock, and calendar contracts were reviewed and closed at commit `3fbc9a1`.
+- `DATA-003`, `RISK-002`, and `NFR-MNT-004` are marked `IMPLEMENTED`. No
+  requirement is marked `VERIFIED` and no stage gate has passed.
 - No broker adapter, credential, network-order path, or real-money capability
   exists.
 
@@ -165,6 +166,7 @@ must be handed to the coordinator for integration.
 | TB-2004 | Watchdog | `src/trading_bot/operations/watchdog.py`, matching tests | No broker calls; use a cancellation port and fake only |
 | TB-2005 | Quality | Import-boundary and performance tests | Coordinate any production-code change separately |
 | TB-3002 | Data schemas | `src/trading_bot/data/models.py`, matching tests | Reuse canonical domain values and the TB-1004 time contracts; `src/trading_bot/data/__init__.py` is now shared |
+| TB-3003 | Calendar data | `src/trading_bot/data/calendars/**`, matching tests | Build on the delivered `ExchangeCalendar` port; `src/trading_bot/data/__init__.py` is now shared |
 | TB-5001 | Execution port | `src/trading_bot/execution/ports.py`, fakes, tests | No Alpaca SDK or credentials |
 
 TB-1004 delivered its time contracts into `src/trading_bot/domain/time.py`,
@@ -188,7 +190,7 @@ reconcile them before editing.
 
 | Order | Task | Branch or PR | Reviewer | Validation status | Conflict notes | Decision |
 | --- | --- | --- | --- | --- | --- | --- |
-| 1 | TB-1004 | `main` (sequential) | Unassigned | Ruff, strict mypy, 211 tests, 100% coverage, wheel built | `domain/__init__.py` and `data/__init__.py` are now shared with TB-3002 | `PENDING_REVIEW` |
+| - | None | - | - | - | - | Queue empty |
 
 The coordinator orders integration by dependency and shared-file risk, not by
 completion time. Downstream branches rebase or merge from the newly integrated
@@ -227,7 +229,7 @@ must not bypass an external blocker or introduce real credentials.
 | TB-1001 | Repository, package, lockfile, quality tools, and CI | NFR-SEC-003, NFR-MNT-002 | None | `DONE` | Initial implementation | EV-0001 and EV-0002 |
 | TB-1002 | Fail-closed runtime config and redacted CLI | NFR-SAFE-001, NFR-MNT-002, RISK-006 | TB-1001 | `DONE` | Initial implementation | Config and CLI tests pass |
 | TB-1003 | Complete canonical domain values and reason-code registry | NFR-MNT-004 | TB-1002 | `DONE` | GitHub Copilot (sequential) | EV-0007 through EV-0009 |
-| TB-1004 | UTC clock port and deterministic test clock | DATA-003, EXEC-006 | TB-1001 | `IN_REVIEW` | GitHub Copilot (sequential) | EV-0012; awaiting review |
+| TB-1004 | UTC clock port and deterministic test clock | DATA-003, EXEC-006 | TB-1001 | `DONE` | GitHub Copilot (sequential) | EV-0012 and EV-0013 |
 | TB-1005 | Structured audit schema and redaction boundary | AUD-001, NFR-SEC-004 | TB-1002 | `READY` | Unassigned | Schema and nested canary tests |
 | TB-1006 | SQLite migrations, transaction boundary, and atomic storage | STATE-001, NFR-REP-002 | TB-1001 | `READY` | Unassigned | Replayable migration and commit-failure tests |
 
@@ -247,7 +249,7 @@ must not bypass an external blocker or introduce real credentials.
 | --- | --- | --- | --- | --- | --- | --- |
 | TB-3001 | Qualify historical and current data providers | DATA-001, DATA-006 | TB-0002 | `BLOCKED` | Unassigned | Approved source qualification record |
 | TB-3002 | Canonical instrument, bar, action, and manifest schemas | DATA-001, DATA-003, DATA-004 | TB-1003 | `READY` | Unassigned | Typed schema and invalid-value tests |
-| TB-3003 | Exchange calendar, holidays, half-days, and DST fixtures | DATA-002, DATA-003 | TB-1004 | `BACKLOG` | Unassigned | Calendar boundary suite passes |
+| TB-3003 | Exchange calendar, holidays, half-days, and DST fixtures | DATA-002, DATA-003 | TB-1004 | `READY` | Unassigned | Calendar boundary suite passes |
 | TB-3004 | Provider-specific availability and current-data freshness rule | DATA-007 | TB-3001, TB-3003 | `BLOCKED` | Unassigned | `available_at_utc` policy approved |
 | TB-3005 | Implement DV-001 through DV-012 | DATA-005 | TB-3002, TB-3003 | `BACKLOG` | Unassigned | One isolated failing fixture per rule |
 | TB-3006 | Immutable snapshots, canonical hashes, and revision detection | DATA-004, DATA-006, NFR-REP-003 | TB-3005 | `BACKLOG` | Unassigned | Stable unchanged pull and preserved revision |
@@ -300,6 +302,7 @@ must not bypass an external blocker or introduce real credentials.
 | TB-2002 | 31 August 2026 | `tests/test_operations_controls.py` and EV-0001 | RISK-004 remains specified until watchdog integration |
 | TB-1003 | 31 August 2026 | Independent approval, EV-0007, EV-0008, commit `84e869e` | NFR-MNT-004 marked `IMPLEMENTED` |
 | TB-0006 | 31 August 2026 | Personal authentication, baseline adoption, and fast-forward push in EV-0010 | Parallel Git baseline established |
+| TB-1004 | 31 August 2026 | Independent review reproduction in EV-0013 and worker evidence EV-0012 | DATA-003 marked `IMPLEMENTED`; EXEC-006 unchanged |
 
 ## Evidence Ledger
 
@@ -317,6 +320,7 @@ must not bypass an external blocker or introduce real credentials.
 | EV-0010 | 31 August 2026 | Personal GitHub synchronization | Active personal account and admin permission verified; `main` synchronized through `2c0bf4d`; CI run 33379734390 passed | `coordination/handoffs/TB-0006.md` |
 | EV-0011 | 31 August 2026 | Review remediation | `py.typed` marker shipped in wheel; supported range proven on Python 3.12 and 3.14; boundary-validator tests added; Ruff pass, strict mypy pass across 19 files, 156 tests pass at 100% statement and branch coverage | Commands in `README.md` |
 | EV-0012 | 31 August 2026 | TB-1004 UTC clock and calendar ports | Ruff pass, strict mypy pass across 26 files, 211 tests pass at 100% statement and branch coverage; wheel contains the new time, clock, and calendar modules; unanchored `data/` ignore rule proven and repaired | `coordination/handoffs/TB-1004.md` |
+| EV-0013 | 31 August 2026 | TB-1004 independent review reproduction | `APPROVE`; sync, Ruff, strict mypy over 26 files, 211 tests at 100% statement and branch coverage, wheel contents, and the ignore-rule repair all reproduced from a clean sync | `coordination/handoffs/TB-1004.md` |
 
 Evidence records summarize a result; task records and handoffs must preserve the
 exact command, exit code, affected test names, and artefact identity needed for
@@ -349,3 +353,4 @@ review.
 | 31 August 2026 | Configured origin and adopted user-created remote baseline without changing worktree content | GitHub Copilot | Baseline commit and 63-file manifest verification |
 | 31 August 2026 | Integrated and closed TB-1003 locally; unlocked TB-3002 | GitHub Copilot | EV-0009 |
 | 31 August 2026 | Authenticated the personal GitHub owner, fast-forwarded origin/main, and closed TB-0006 | GitHub Copilot | EV-0010 |
+| 31 August 2026 | Reviewed, integrated, and closed TB-1004; promoted TB-3003 to `READY`; moved DATA-003 to `IMPLEMENTED` | GitHub Copilot | EV-0013 |
