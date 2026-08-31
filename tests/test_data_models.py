@@ -242,6 +242,7 @@ def test_bar_rejects_a_volume_outside_int64(bad_volume: int) -> None:
 
 def test_bar_accepts_the_int64_bounds() -> None:
     assert make_bar(volume=2**63 - 1).volume == 2**63 - 1
+    assert make_bar(volume=-(2**63)).volume == -(2**63)
 
 
 def test_action_normalizes_availability_and_keeps_local_dates() -> None:
@@ -274,6 +275,19 @@ def test_action_accepts_a_symbol_change() -> None:
     )
 
     assert (action.old_symbol, action.new_symbol) == ("OLD", "NEW")
+
+
+def test_action_accepts_a_case_only_symbol_rename() -> None:
+    # Provider symbols are not case-normalized, so this is a real rename.
+    action = make_action(
+        action_type=CorporateActionType.SYMBOL_CHANGE,
+        cash_amount=None,
+        currency=None,
+        old_symbol="spy",
+        new_symbol="SPY",
+    )
+
+    assert (action.old_symbol, action.new_symbol) == ("spy", "SPY")
 
 
 @pytest.mark.parametrize("field_name", ["ratio", "cash_amount"])
@@ -328,11 +342,6 @@ def test_action_accepts_absent_optional_dates() -> None:
         (
             {"action_type": CorporateActionType.SYMBOL_CHANGE, "cash_amount": None,
              "currency": None, "old_symbol": "SAME", "new_symbol": "SAME"},
-            "symbol change requires different symbols",
-        ),
-        (
-            {"action_type": CorporateActionType.SYMBOL_CHANGE, "cash_amount": None,
-             "currency": None, "old_symbol": "spy", "new_symbol": "SPY"},
             "symbol change requires different symbols",
         ),
     ],
@@ -406,10 +415,6 @@ def test_manifest_retains_every_validation_result(result: ValidationResult) -> N
             {"effective_start": date(2026, 3, 6)},
             "effective_start must not be after effective_end",
         ),
-        (
-            {"effective_end": date(2026, 3, 8)},
-            "effective_end must not postdate retrieved_at_utc",
-        ),
         ({"row_count": -1}, "row_count must not be negative"),
         ({"row_count": 2**63}, "row_count must be an integer representable in 64 bits"),
         ({"instrument_ids": ("",)}, "instrument_ids entry must be a non-empty trimmed value"),
@@ -429,30 +434,52 @@ def test_manifest_rejects_invalid_fields(overrides: dict[str, object], message: 
         make_manifest(**overrides)
 
 
-def test_manifest_rejects_self_parentage() -> None:
-    manifest = make_manifest()
+def test_manifest_leaves_lineage_rule_violations_representable() -> None:
+    # Coverage bounds and lineage-graph integrity need the exchange calendar and
+    # the sibling manifests, so DV-002, DV-010, DV-011, and DV-012 own them.
+    manifest = make_manifest(
+        effective_end=date(2036, 1, 1),
+        parent_dataset_ids=("daily_bars-" + HASH_B,),
+    )
 
-    with pytest.raises(ValueError, match="parent_dataset_ids must not contain the dataset itself"):
-        make_manifest(parent_dataset_ids=(manifest.dataset_id,))
+    assert manifest.effective_end > manifest.retrieved_at_utc.date()
+    assert manifest.dataset_id in manifest.parent_dataset_ids
 
 
 @pytest.mark.parametrize(
     "secret_key",
     [
-        "api_key",
-        "apiKey",
-        "access-key",
+        "auth",
+        "bearer",
+        "jwt",
         "key",
-        "token",
-        "access_token",
-        "authorization",
-        "client_secret",
-        "signature",
         "pwd",
         "sig",
-        "auth",
-        "jwt",
+        "access_key",
+        "api_key",
+        "apiKey",
+        "app_key",
+        "auth_key",
+        "authorization",
+        "consumer_key",
+        "credentials",
         "passphrase",
+        "passwd",
+        "password",
+        "private_key",
+        "client_secret",
+        "session_key",
+        "shared_key",
+        "signature",
+        "Ocp-Apim-Subscription-Key",
+        "token",
+        "api_token",
+        "auth_token",
+        "bearer_token",
+        "access_token",
+        "security_token",
+        "personal_access_token",
+        "request_signature",
     ],
 )
 def test_manifest_rejects_secret_like_request_keys(secret_key: str) -> None:
@@ -460,11 +487,39 @@ def test_manifest_rejects_secret_like_request_keys(secret_key: str) -> None:
         make_manifest(request_parameters=((secret_key, "redacted"),))
 
 
-@pytest.mark.parametrize("benign_key", ["page_token", "sort_key", "adjustment", "timeframe"])
+@pytest.mark.parametrize(
+    "benign_key",
+    [
+        "page_token",
+        "next_page_token",
+        "continuation_token",
+        "sort_key",
+        "partition_key",
+        "keys",
+        "keyword",
+        "monkey",
+        "turnkey",
+        "author",
+        "authority",
+        "signal",
+        "sigma",
+        "bearer_bond",
+        "currency",
+        "timeframe",
+        "adjustment",
+    ],
+)
 def test_manifest_accepts_benign_request_keys(benign_key: str) -> None:
     manifest = make_manifest(request_parameters=((benign_key, "abc"),))
 
     assert manifest.request_parameters == ((benign_key, "abc"),)
+
+
+def test_manifest_accepts_an_empty_request_value() -> None:
+    # Keys must be present and trimmed; a value may legitimately be empty.
+    manifest = make_manifest(request_parameters=(("adjustment", ""),))
+
+    assert manifest.request_parameters == (("adjustment", ""),)
 
 
 @pytest.mark.parametrize(

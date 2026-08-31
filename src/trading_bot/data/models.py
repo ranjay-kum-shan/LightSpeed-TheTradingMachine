@@ -1,24 +1,35 @@
 """Canonical market-data schemas for instruments, bars, actions, and manifests.
 
 These values are the ``NORMALIZED`` stage of the dataset lifecycle, not the
-``VALIDATING`` stage. Two kinds of rule are enforced here and no others:
+``VALIDATING`` stage, so anything a ``DV-*`` rule must report as an offending
+row stays constructible. The rules enforced here, audited and enumerated:
 
-1. Representational rules, without which the value has no defined meaning -
-   naive timestamps, non-finite numbers, malformed enums or currency codes, and
-   degenerate intervals.
-2. One safety rule: a bar may not claim availability before its own session
-   close. No ``DV-*`` rule covers availability ordering, so nothing downstream
-   would catch lookahead, and unlike a crossed high and low it cannot be
-   reviewed into acceptance.
+1. Representational rules, without which the value has no defined meaning:
+   naive timestamps, non-finite ``float`` and ``Decimal`` values, integers
+   outside ``int64``, blank or untrimmed identity strings, malformed currency
+   codes and ``content_hash`` digests, degenerate intervals, and unsorted or
+   duplicated lineage lists. Enum membership is a static type rule only; nothing
+   here checks it at runtime.
+2. One availability safety rule: a bar may not claim ``available_at_utc``
+   earlier than its own ``bar_close_utc``. No ``DV-*`` rule covers availability
+   ordering, so nothing downstream would catch lookahead, and unlike a crossed
+   high and low a lookahead row can never be reviewed into acceptance.
+3. Corporate-action completeness rules: a split carries a positive ratio, a cash
+   dividend carries a non-negative amount, a cash amount carries exactly one
+   currency, and a symbol change carries two different symbols. Without these an
+   action cannot be applied at all.
+4. One security policy rule: manifest request parameters refuse secret-like key
+   names, because lineage records are immutable and a key written once cannot be
+   withdrawn. It inspects key names only.
 
-Everything else the twelve mandatory validation rules cover stays representable
-so the dataset validator can report and quarantine offending canonical rows.
+Coverage bounds, lineage-graph integrity, duplicates, gaps, and price or volume
+plausibility are deliberately absent; they belong to the dataset validator.
 """
 
 import math
 import re
 from dataclasses import dataclass
-from datetime import date, datetime, timedelta
+from datetime import date, datetime
 from decimal import Decimal
 from enum import StrEnum
 
@@ -31,32 +42,34 @@ _INT64_MAX = 2**63 - 1
 _CURRENCY_PATTERN = re.compile(r"^[A-Z]{3}$")
 _SHA256_PATTERN = re.compile(r"^[0-9a-f]{64}$")
 _SEPARATORS = re.compile(r"[^0-9a-z]+")
-_SECRET_KEY_NAMES = frozenset(
+# Pagination cursors are not credentials even though they end in "token".
+_ALLOWED_KEY_NAMES = frozenset(
     {
-        "auth",
-        "bearer",
-        "jwt",
-        "key",
-        "pwd",
-        "sig",
-        "signature",
-        "token",
-        "accesstoken",
-        "idtoken",
-        "refreshtoken",
-        "sessiontoken",
+        "continuationtoken",
+        "nextpagetoken",
+        "nexttoken",
+        "pagetoken",
     }
 )
+_SECRET_KEY_NAMES = frozenset({"auth", "bearer", "jwt", "key", "pwd", "sig"})
 _SECRET_KEY_FRAGMENTS = (
     "accesskey",
     "apikey",
+    "appkey",
+    "authkey",
     "authorization",
+    "consumerkey",
     "credential",
     "passphrase",
     "passwd",
     "password",
     "privatekey",
     "secret",
+    "sessionkey",
+    "sharedkey",
+    "signature",
+    "subscriptionkey",
+    "token",
 )
 
 
@@ -105,16 +118,22 @@ def _require_int64(value: int, field_name: str) -> int:
 
 
 def _require_sorted_unique(values: tuple[str, ...], field_name: str) -> None:
-    for value in values:
-        _require_text(value, f"{field_name} entry")
     if len(set(values)) != len(values):
         raise ValueError(f"{field_name} must not contain duplicates")
     if list(values) != sorted(values):
         raise ValueError(f"{field_name} must be sorted")
 
 
+def _require_sorted_unique_entries(values: tuple[str, ...], field_name: str) -> None:
+    for value in values:
+        _require_text(value, f"{field_name} entry")
+    _require_sorted_unique(values, field_name)
+
+
 def _is_secret_key(key: str) -> bool:
     normalized = _SEPARATORS.sub("", key.lower())
+    if normalized in _ALLOWED_KEY_NAMES:
+        return False
     if normalized in _SECRET_KEY_NAMES:
         return True
     return any(fragment in normalized for fragment in _SECRET_KEY_FRAGMENTS)
@@ -269,7 +288,9 @@ class CorporateAction:
         if self.action_type is CorporateActionType.SYMBOL_CHANGE:
             if self.old_symbol is None or self.new_symbol is None:
                 raise ValueError("symbol change requires old_symbol and new_symbol")
-            if self.old_symbol.casefold() == self.new_symbol.casefold():
+            # Exact comparison: provider symbols are not case-normalized, so a
+            # case-only rename is a real event rather than a no-op.
+            if self.old_symbol == self.new_symbol:
                 raise ValueError("symbol change requires different symbols")
 
 
@@ -320,16 +341,11 @@ class DatasetManifest:
         )
         if self.effective_start > self.effective_end:
             raise ValueError("effective_start must not be after effective_end")
-        # One day of slack because session dates are exchange-local, not UTC.
-        if self.effective_end > self.retrieved_at_utc.date() + timedelta(days=1):
-            raise ValueError("effective_end must not postdate retrieved_at_utc")
         _require_int64(self.row_count, "row_count")
         if self.row_count < 0:
             raise ValueError("row_count must not be negative")
-        _require_sorted_unique(self.instrument_ids, "instrument_ids")
-        _require_sorted_unique(self.parent_dataset_ids, "parent_dataset_ids")
-        if self.dataset_id in self.parent_dataset_ids:
-            raise ValueError("parent_dataset_ids must not contain the dataset itself")
+        _require_sorted_unique_entries(self.instrument_ids, "instrument_ids")
+        _require_sorted_unique_entries(self.parent_dataset_ids, "parent_dataset_ids")
         self._require_canonical_request()
 
     def _require_canonical_request(self) -> None:

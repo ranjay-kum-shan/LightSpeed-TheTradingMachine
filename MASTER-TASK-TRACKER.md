@@ -190,7 +190,7 @@ reconcile them before editing.
 
 | Order | Task | Branch or PR | Reviewer | Validation status | Conflict notes | Decision |
 | --- | --- | --- | --- | --- | --- | --- |
-| 1 | TB-3002 | `main` (sequential) | Independent review agent | Cycle one `CHANGES_REQUESTED`; remediated and resubmitted at Ruff, strict mypy over 28 files, 347 tests, 100% coverage, wheel built | `data/__init__.py` is shared with TB-3003 | `PENDING_REVIEW` |
+| 1 | TB-3002 | `main` (sequential) | Two independent review agents | Two review cycles returned `CHANGES_REQUESTED`; after cycle-two remediation the gate is Ruff pass, strict mypy over 28 files, 377 tests, 100% statement and branch coverage, wheel built | `data/__init__.py` is shared with TB-3003 | `PENDING_REVIEW` |
 
 The coordinator orders integration by dependency and shared-file risk, not by
 completion time. Downstream branches rebase or merge from the newly integrated
@@ -248,7 +248,7 @@ must not bypass an external blocker or introduce real credentials.
 | ID | Task | Requirements | Depends on | Status | Owner | Next acceptance boundary |
 | --- | --- | --- | --- | --- | --- | --- |
 | TB-3001 | Qualify historical and current data providers | DATA-001, DATA-006 | TB-0002 | `BLOCKED` | Unassigned | Approved source qualification record |
-| TB-3002 | Canonical instrument, bar, action, and manifest schemas | DATA-001, DATA-003, DATA-004 | TB-1003 | `IN_REVIEW` | GitHub Copilot (sequential) | EV-0016; awaiting review cycle two |
+| TB-3002 | Canonical instrument, bar, action, and manifest schemas | DATA-001, DATA-003, DATA-004 | TB-1003 | `IN_REVIEW` | GitHub Copilot (sequential) | EV-0018; awaiting review cycle three |
 | TB-3003 | Exchange calendar, holidays, half-days, and DST fixtures | DATA-002, DATA-003 | TB-1004 | `READY` | Unassigned | Calendar boundary suite passes |
 | TB-3004 | Provider-specific availability and current-data freshness rule | DATA-007 | TB-3001, TB-3003 | `BLOCKED` | Unassigned | `available_at_utc` policy approved |
 | TB-3005 | Implement DV-001 through DV-012 | DATA-005 | TB-3002, TB-3003 | `BACKLOG` | Unassigned | One isolated failing fixture per rule |
@@ -324,6 +324,8 @@ must not bypass an external blocker or introduce real credentials.
 | EV-0014 | 31 August 2026 | TB-3002 canonical data schemas | Ruff pass, strict mypy pass across 28 files, 316 tests pass at 100% statement and branch coverage; wheel contains `trading_bot/data/models.py`; the `DV-*` rule boundary is pinned by an explicit test | `coordination/handoffs/TB-3002.md` |
 | EV-0015 | 31 August 2026 | TB-3002 independent review cycle one | `CHANGES_REQUESTED`; 0 Critical, 4 Major, 10 Minor; all declared gates reproduced; the `NORMALIZED` before `VALIDATING` boundary upheld, its stated discriminator rejected, and an undeclared master-tracker edit found | `coordination/handoffs/TB-3002.md` |
 | EV-0016 | 31 August 2026 | TB-3002 remediation | Nine findings fixed in code and tests, five disclosed as records or follow-ups; Ruff pass, strict mypy pass across 28 files, 347 tests pass at 100% statement and branch coverage; wheel rebuilt | `coordination/handoffs/TB-3002.md` |
+| EV-0017 | 31 August 2026 | TB-3002 independent review cycle two | `CHANGES_REQUESTED`; 0 Critical, 3 Major, 10 Minor; behavioural probes and mutation controls proved the cycle-one secret-guard fix was a net security regression and the rewritten boundary claim was false | `coordination/handoffs/TB-3002.md` |
+| EV-0018 | 31 August 2026 | TB-3002 cycle-two remediation | Secret guard rebuilt with an allowlist and restored fragments; two unsound rules removed rather than retuned; boundary claim replaced by an audited enumeration; Ruff pass, strict mypy pass across 28 files, 377 tests pass at 100% statement and branch coverage; wheel rebuilt | `coordination/handoffs/TB-3002.md` |
 
 Evidence records summarize a result; task records and handoffs must preserve the
 exact command, exit code, affected test names, and artefact identity needed for
@@ -360,3 +362,4 @@ review.
 | 31 August 2026 | Started and submitted TB-3002 in documented sequential mode; no parallel claim asserted | GitHub Copilot | EV-0014 |
 | 31 August 2026 | Returned TB-3002 to implementation after independent review, then resubmitted it after remediation | GitHub Copilot | EV-0015 and EV-0016 |
 | 31 August 2026 | Recorded that this session holds both the implementer and coordinator roles, so master-tracker edits accompany worker commits until an ongoing coordinator is appointed | GitHub Copilot | TB-3002 review finding M3 |
+| 31 August 2026 | Returned TB-3002 to implementation a second time after an independent security regression finding, then resubmitted it | GitHub Copilot | EV-0017 and EV-0018 |
