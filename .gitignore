@@ -21,11 +21,13 @@ junit.xml
 .env.*
 !.env.example
 
-data/
-state/
-logs/
-reports/
-run/
+# Anchored to the repository root so source packages such as
+# src/trading_bot/data are not swallowed by these runtime directory names.
+/data/
+/state/
+/logs/
+/reports/
+/run/
 
 *.sqlite
 *.sqlite-shm

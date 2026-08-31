@@ -45,11 +45,11 @@
 | Total registered tasks | 41 | Task Register below |
 | `DONE` | 6 | Completed Work below |
 | `IN_PROGRESS` | 0 | Active Claims below |
-| `READY` | 7 | Parallelization Map below |
+| `READY` | 6 | Parallelization Map below |
 | `BLOCKED` | 9 | Blockers and Decisions below |
 | `BACKLOG` | 19 | Dependency sequencing below |
 | Active claims | 0 | `coordination/claims/` plus Active Claims below |
-| Items in review | 0 | Integration Queue below |
+| Items in review | 1 | Integration Queue below |
 | Open incidents | 0 | Incident records |
 | Baseline commit | `2c0bf4d75fc74e701287b3c2701ec3a2a796695d` | CI-verified collaboration baseline |
 | Git remote | `https://github.com/ranjay-kum-shan/LightSpeed-TheTradingMachine.git` | Git configuration |
@@ -107,11 +107,12 @@ appropriate prior state. Reopened work moves from `DONE` to `IN_REVIEW` or
   coordinator. Git setup and remote publication are no longer blockers.
 - The uploadable tree contains source, configuration, documentation, and tests;
   generated environments and caches are absent.
-- The last complete validation passed Ruff, strict mypy, and 156 tests at 100%
+- The last complete validation passed Ruff, strict mypy, and 211 tests at 100%
   statement and branch coverage on Python 3.12 and 3.14.
 - The implemented code covers fail-closed configuration, the configuration CLI,
-  canonical order values, the pure risk engine, operator kill assessment, and
-  atomic heartbeat health. Canonical reason codes and order lifecycle contracts
+  canonical order values, UTC time normalization with clock and exchange-calendar
+  ports, the pure risk engine, operator kill assessment, and atomic heartbeat
+  health. Canonical reason codes and order lifecycle contracts
   were independently approved and integrated in commit `84e869e`.
 - `RISK-002` and `NFR-MNT-004` are marked `IMPLEMENTED`. No requirement is
   marked `VERIFIED` and no stage gate has passed.
@@ -159,13 +160,19 @@ must be handed to the coordinator for integration.
 
 | Task | Lane | Primary write scope | Required coordination |
 | --- | --- | --- | --- |
-| TB-1004 | Time | `src/trading_bot/time/**`, matching tests | Coordinate domain timestamp types with TB-3003 |
 | TB-1005 | Audit | `src/trading_bot/audit/**`, matching tests | Do not log arbitrary config or SDK objects |
 | TB-1006 | Storage | `src/trading_bot/storage/**`, matching tests | Own SQLite migrations and atomic persistence contracts |
 | TB-2004 | Watchdog | `src/trading_bot/operations/watchdog.py`, matching tests | No broker calls; use a cancellation port and fake only |
 | TB-2005 | Quality | Import-boundary and performance tests | Coordinate any production-code change separately |
-| TB-3002 | Data schemas | `src/trading_bot/data/models.py`, matching tests | Reuse canonical domain values and coordinate timestamp types with TB-1004 |
+| TB-3002 | Data schemas | `src/trading_bot/data/models.py`, matching tests | Reuse canonical domain values and the TB-1004 time contracts; `src/trading_bot/data/__init__.py` is now shared |
 | TB-5001 | Execution port | `src/trading_bot/execution/ports.py`, fakes, tests | No Alpaca SDK or credentials |
+
+TB-1004 delivered its time contracts into `src/trading_bot/domain/time.py`,
+`src/trading_bot/adapters/`, and `src/trading_bot/data/` rather than the
+previously listed `src/trading_bot/time/**`, because the
+[architecture module boundaries](docs/02-architecture.md) assign clocks to
+`adapters` and calendars to `data`. TB-3003 builds real calendar data on the
+delivered `ExchangeCalendar` port.
 
 ## Active Claims
 
@@ -181,7 +188,7 @@ reconcile them before editing.
 
 | Order | Task | Branch or PR | Reviewer | Validation status | Conflict notes | Decision |
 | --- | --- | --- | --- | --- | --- | --- |
-| None | - | - | - | - | - | Queue empty |
+| 1 | TB-1004 | `main` (sequential) | Unassigned | Ruff, strict mypy, 211 tests, 100% coverage, wheel built | `domain/__init__.py` and `data/__init__.py` are now shared with TB-3002 | `PENDING_REVIEW` |
 
 The coordinator orders integration by dependency and shared-file risk, not by
 completion time. Downstream branches rebase or merge from the newly integrated
@@ -220,7 +227,7 @@ must not bypass an external blocker or introduce real credentials.
 | TB-1001 | Repository, package, lockfile, quality tools, and CI | NFR-SEC-003, NFR-MNT-002 | None | `DONE` | Initial implementation | EV-0001 and EV-0002 |
 | TB-1002 | Fail-closed runtime config and redacted CLI | NFR-SAFE-001, NFR-MNT-002, RISK-006 | TB-1001 | `DONE` | Initial implementation | Config and CLI tests pass |
 | TB-1003 | Complete canonical domain values and reason-code registry | NFR-MNT-004 | TB-1002 | `DONE` | GitHub Copilot (sequential) | EV-0007 through EV-0009 |
-| TB-1004 | UTC clock port and deterministic test clock | DATA-003, EXEC-006 | TB-1001 | `READY` | Unassigned | Naive-time rejection and boundary tests |
+| TB-1004 | UTC clock port and deterministic test clock | DATA-003, EXEC-006 | TB-1001 | `IN_REVIEW` | GitHub Copilot (sequential) | EV-0012; awaiting review |
 | TB-1005 | Structured audit schema and redaction boundary | AUD-001, NFR-SEC-004 | TB-1002 | `READY` | Unassigned | Schema and nested canary tests |
 | TB-1006 | SQLite migrations, transaction boundary, and atomic storage | STATE-001, NFR-REP-002 | TB-1001 | `READY` | Unassigned | Replayable migration and commit-failure tests |
 
@@ -309,6 +316,7 @@ must not bypass an external blocker or introduce real credentials.
 | EV-0009 | 31 August 2026 | TB-1003 local integration | Commit `84e869e27e9a5210fe3360494ace250530250a2e` created above remote baseline | Local Git history |
 | EV-0010 | 31 August 2026 | Personal GitHub synchronization | Active personal account and admin permission verified; `main` synchronized through `2c0bf4d`; CI run 33379734390 passed | `coordination/handoffs/TB-0006.md` |
 | EV-0011 | 31 August 2026 | Review remediation | `py.typed` marker shipped in wheel; supported range proven on Python 3.12 and 3.14; boundary-validator tests added; Ruff pass, strict mypy pass across 19 files, 156 tests pass at 100% statement and branch coverage | Commands in `README.md` |
+| EV-0012 | 31 August 2026 | TB-1004 UTC clock and calendar ports | Ruff pass, strict mypy pass across 26 files, 211 tests pass at 100% statement and branch coverage; wheel contains the new time, clock, and calendar modules; unanchored `data/` ignore rule proven and repaired | `coordination/handoffs/TB-1004.md` |
 
 Evidence records summarize a result; task records and handoffs must preserve the
 exact command, exit code, affected test names, and artefact identity needed for

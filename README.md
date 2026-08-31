@@ -45,8 +45,8 @@ The source review is the [Trading System Plan Review v2](docs/reference/trading-
 | Requirements | 59 `SPECIFIED`; 2 `IMPLEMENTED`; 0 `VERIFIED` |
 | Charter | Draft; Stage 0 not passed |
 | External order authorization | `PAPER_ONLY` |
-| Software implementation | Fail-closed config and CLI, canonical domain contracts, pure risk engine, operator kill assessment, and heartbeat health |
-| Automated checks | Ruff and strict mypy clean; 156 tests passing at 100% statement and branch coverage |
+| Software implementation | Fail-closed config and CLI, canonical domain contracts, UTC time and calendar ports, pure risk engine, operator kill assessment, and heartbeat health |
+| Automated checks | Ruff and strict mypy clean; 211 tests passing at 100% statement and branch coverage |
 | Reference ETF and data provider | Owner decision required |
 | Paper broker | Alpaca proposed; owner eligibility and terms confirmation required |
 | Real-money capability | Absent and unauthorized |
