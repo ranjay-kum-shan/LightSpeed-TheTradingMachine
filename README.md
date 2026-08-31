@@ -34,7 +34,7 @@ The source review is the [Trading System Plan Review v2](docs/reference/trading-
 
 ## Current Status
 
-**Requirements status:** 60 SPECIFIED, 1 IMPLEMENTED, 0 VERIFIED  
+**Requirements status:** 59 SPECIFIED, 2 IMPLEMENTED, 0 VERIFIED  
 **Current authorization:** PAPER_ONLY  
 **Current gate:** Stage 0 not passed  
 **Implementation status:** In progress - offline foundation and pre-trade controls
@@ -42,10 +42,10 @@ The source review is the [Trading System Plan Review v2](docs/reference/trading-
 | Item | State |
 | --- | --- |
 | Documentation baseline | Complete draft |
-| Requirements | 60 `SPECIFIED`; 1 `IMPLEMENTED`; 0 `VERIFIED` |
+| Requirements | 59 `SPECIFIED`; 2 `IMPLEMENTED`; 0 `VERIFIED` |
 | Charter | Draft; Stage 0 not passed |
 | External order authorization | `PAPER_ONLY` |
-| Software implementation | Fail-closed config, CLI, pure risk engine, operator kill assessment, and heartbeat health |
+| Software implementation | Fail-closed config and CLI, canonical domain contracts, pure risk engine, operator kill assessment, and heartbeat health |
 | Automated checks | Ruff and strict mypy clean; 79 tests passing |
 | Reference ETF and data provider | Owner decision required |
 | Paper broker | Alpaca proposed; owner eligibility and terms confirmation required |

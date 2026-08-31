@@ -35,21 +35,21 @@
 **Coordinator:** `GitHub Copilot (sequential session only)`  
 **Current authorization:** `PAPER_ONLY`  
 **Current gate:** Stage 0 not passed  
-**Requirement state:** 60 `SPECIFIED`, 1 `IMPLEMENTED`, 0 `VERIFIED`  
-**Parallel execution state:** `BASELINE_ADOPTED_PUSH_AUTH_REQUIRED`
+**Requirement state:** 59 `SPECIFIED`, 2 `IMPLEMENTED`, 0 `VERIFIED`  
+**Parallel execution state:** `LOCAL_INTEGRATION_COMPLETE_PUSH_AUTH_REQUIRED`
 
 ## Control Panel
 
 | Measure | Current value | Authority |
 | --- | --- | --- |
 | Total registered tasks | 41 | Task Register below |
-| `DONE` | 4 | Completed Work below |
+| `DONE` | 5 | Completed Work below |
 | `IN_PROGRESS` | 0 | Active Claims below |
-| `READY` | 6 | Parallelization Map below |
+| `READY` | 7 | Parallelization Map below |
 | `BLOCKED` | 10 | Blockers and Decisions below |
-| `BACKLOG` | 20 | Dependency sequencing below |
+| `BACKLOG` | 19 | Dependency sequencing below |
 | Active claims | 0 | `coordination/claims/` plus Active Claims below |
-| Items in review | 1 | Integration Queue below |
+| Items in review | 0 | Integration Queue below |
 | Open incidents | 0 | Incident records |
 | Baseline commit | `6dd846aa0983f31f1ed9aea04b8c15f8eb7a7b0d` | `origin/main` |
 | Git remote | `https://github.com/ranjay-kum-shan/LightSpeed-TheTradingMachine.git` | Git configuration |
@@ -110,10 +110,9 @@ appropriate prior state. Reopened work moves from `DONE` to `IN_REVIEW` or
 - The implemented code covers fail-closed configuration, the configuration CLI,
   canonical order values, the pure risk engine, operator kill assessment, and
   atomic heartbeat health. Canonical reason codes and order lifecycle contracts
-  are implemented in the working tree and independently approved, but remain
-  `IN_REVIEW` until baseline integration.
-- `RISK-002` is the only requirement currently marked `IMPLEMENTED`. No
-  requirement is marked `VERIFIED` and no stage gate has passed.
+  were independently approved and integrated in commit `84e869e`.
+- `RISK-002` and `NFR-MNT-004` are marked `IMPLEMENTED`. No requirement is
+  marked `VERIFIED` and no stage gate has passed.
 - No broker adapter, credential, network-order path, or real-money capability
   exists.
 
@@ -163,6 +162,7 @@ must be handed to the coordinator for integration.
 | TB-1006 | Storage | `src/trading_bot/storage/**`, matching tests | Own SQLite migrations and atomic persistence contracts |
 | TB-2004 | Watchdog | `src/trading_bot/operations/watchdog.py`, matching tests | No broker calls; use a cancellation port and fake only |
 | TB-2005 | Quality | Import-boundary and performance tests | Coordinate any production-code change separately |
+| TB-3002 | Data schemas | `src/trading_bot/data/models.py`, matching tests | Reuse canonical domain values and coordinate timestamp types with TB-1004 |
 | TB-5001 | Execution port | `src/trading_bot/execution/ports.py`, fakes, tests | No Alpaca SDK or credentials |
 
 ## Active Claims
@@ -179,7 +179,7 @@ reconcile them before editing.
 
 | Order | Task | Branch or PR | Reviewer | Validation status | Conflict notes | Decision |
 | --- | --- | --- | --- | --- | --- | --- |
-| 1 | TB-1003 | Current working tree above `origin/main` | Independent review agent | `APPROVE`; worker Ruff, mypy, and 79 tests pass | Ready for local integration commit; remote push authentication missing | `APPROVED_READY_TO_INTEGRATE` |
+| None | - | - | - | - | - | Queue empty |
 
 The coordinator orders integration by dependency and shared-file risk, not by
 completion time. Downstream branches rebase or merge from the newly integrated
@@ -217,7 +217,7 @@ must not bypass an external blocker or introduce real credentials.
 | --- | --- | --- | --- | --- | --- | --- |
 | TB-1001 | Repository, package, lockfile, quality tools, and CI | NFR-SEC-003, NFR-MNT-002 | None | `DONE` | Initial implementation | EV-0001 and EV-0002 |
 | TB-1002 | Fail-closed runtime config and redacted CLI | NFR-SAFE-001, NFR-MNT-002, RISK-006 | TB-1001 | `DONE` | Initial implementation | Config and CLI tests pass |
-| TB-1003 | Complete canonical domain values and reason-code registry | NFR-MNT-004 | TB-1002 | `IN_REVIEW` | GitHub Copilot (sequential) | Re-review corrected compatibility contracts |
+| TB-1003 | Complete canonical domain values and reason-code registry | NFR-MNT-004 | TB-1002 | `DONE` | GitHub Copilot (sequential) | EV-0007 through EV-0009 |
 | TB-1004 | UTC clock port and deterministic test clock | DATA-003, EXEC-006 | TB-1001 | `READY` | Unassigned | Naive-time rejection and boundary tests |
 | TB-1005 | Structured audit schema and redaction boundary | AUD-001, NFR-SEC-004 | TB-1002 | `READY` | Unassigned | Schema and nested canary tests |
 | TB-1006 | SQLite migrations, transaction boundary, and atomic storage | STATE-001, NFR-REP-002 | TB-1001 | `READY` | Unassigned | Replayable migration and commit-failure tests |
@@ -237,7 +237,7 @@ must not bypass an external blocker or introduce real credentials.
 | ID | Task | Requirements | Depends on | Status | Owner | Next acceptance boundary |
 | --- | --- | --- | --- | --- | --- | --- |
 | TB-3001 | Qualify historical and current data providers | DATA-001, DATA-006 | TB-0002 | `BLOCKED` | Unassigned | Approved source qualification record |
-| TB-3002 | Canonical instrument, bar, action, and manifest schemas | DATA-001, DATA-003, DATA-004 | TB-1003 | `BACKLOG` | Unassigned | Typed schema and invalid-value tests |
+| TB-3002 | Canonical instrument, bar, action, and manifest schemas | DATA-001, DATA-003, DATA-004 | TB-1003 | `READY` | Unassigned | Typed schema and invalid-value tests |
 | TB-3003 | Exchange calendar, holidays, half-days, and DST fixtures | DATA-002, DATA-003 | TB-1004 | `BACKLOG` | Unassigned | Calendar boundary suite passes |
 | TB-3004 | Provider-specific availability and current-data freshness rule | DATA-007 | TB-3001, TB-3003 | `BLOCKED` | Unassigned | `available_at_utc` policy approved |
 | TB-3005 | Implement DV-001 through DV-012 | DATA-005 | TB-3002, TB-3003 | `BACKLOG` | Unassigned | One isolated failing fixture per rule |
@@ -289,6 +289,7 @@ must not bypass an external blocker or introduce real credentials.
 | TB-1002 | 31 August 2026 | `tests/test_config.py`, `tests/test_cli.py` | Supports fail-closed controls |
 | TB-2001 | 31 August 2026 | `tests/test_risk_engine.py` and EV-0001 | RISK-002 marked `IMPLEMENTED` |
 | TB-2002 | 31 August 2026 | `tests/test_operations_controls.py` and EV-0001 | RISK-004 remains specified until watchdog integration |
+| TB-1003 | 31 August 2026 | Independent approval, EV-0007, EV-0008, commit `84e869e` | NFR-MNT-004 marked `IMPLEMENTED` |
 
 ## Evidence Ledger
 
@@ -302,6 +303,7 @@ must not bypass an external blocker or introduce real credentials.
 | EV-0006 | 31 August 2026 | TB-1003 domain contracts | Ruff pass, strict mypy pass across 18 files, 77 tests pass | `coordination/handoffs/TB-1003.md` |
 | EV-0007 | 31 August 2026 | TB-1003 compatibility repair | Distinct risk-only enum restored; Ruff and mypy pass; 79 tests pass; wheel contains contract modules | `coordination/handoffs/TB-1003.md` |
 | EV-0008 | 31 August 2026 | TB-1003 independent re-review | `APPROVE`; cycle-one findings resolved; command reproduction unavailable | `coordination/handoffs/TB-1003.md` |
+| EV-0009 | 31 August 2026 | TB-1003 local integration | Commit `84e869e27e9a5210fe3360494ace250530250a2e` created above remote baseline | Local Git history |
 
 Evidence records summarize a result; task records and handoffs must preserve the
 exact command, exit code, affected test names, and artefact identity needed for
@@ -332,3 +334,4 @@ review.
 | 31 August 2026 | Resubmitted TB-1003 after restoring the legacy risk enum surface and exhaustive emitted-value tests | GitHub Copilot | EV-0007 |
 | 31 August 2026 | Recorded independent approval for TB-1003; kept task in review pending baseline integration | GitHub Copilot | EV-0008 and BLK-002 |
 | 31 August 2026 | Configured origin and adopted user-created remote baseline without changing worktree content | GitHub Copilot | Baseline commit and 63-file manifest verification |
+| 31 August 2026 | Integrated and closed TB-1003 locally; unlocked TB-3002 | GitHub Copilot | EV-0009 |

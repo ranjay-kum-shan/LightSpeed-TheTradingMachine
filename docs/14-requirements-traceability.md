@@ -46,7 +46,9 @@ This matrix maps every product requirement to its owning specification, planned 
 | `BLOCKED` | External decision or dependency prevents implementation or verification |
 | `NOT_APPLICABLE` | Excluded by an accepted scoped decision with a linked rationale |
 
-**Current matrix state:** 60 requirements are `SPECIFIED`, RISK-002 is `IMPLEMENTED`, and none is `VERIFIED`. Verification remains reserved for a named release and gate evidence bundle.
+**Current matrix state:** 59 requirements are `SPECIFIED`; RISK-002 and
+NFR-MNT-004 are `IMPLEMENTED`; none is `VERIFIED`. Verification remains reserved
+for a named release and gate evidence bundle.
 
 ## Functional Traceability
 
@@ -173,7 +175,7 @@ Performance checks are initial operating budgets, not optimization mandates. Mea
 | NFR-MNT-001 | [Architecture](02-architecture.md) | `T-NFR-DEPENDENCY-001` module import-boundary test | Stage 1 | `SPECIFIED` |
 | NFR-MNT-002 | [Requirements Specification](01-requirements.md) | `T-NFR-CONFIG-002` version unknown-key and missing-field tests | Stage 1 | `SPECIFIED` |
 | NFR-MNT-003 | [Delivery Roadmap](12-delivery-roadmap.md) | `E-NFR-CHANGE-003` work-item documentation and test checklist | Every release | `SPECIFIED` |
-| NFR-MNT-004 | [Operations Runbook](08-operations-and-observability.md) | `T-NFR-SCHEMA-004` reason-code and schema compatibility tests | Stage 1 | `SPECIFIED` |
+| NFR-MNT-004 | [Operations Runbook](08-operations-and-observability.md) | [Domain contract tests](../tests/test_domain_contracts.py) lock reason-code values, families, order purposes, lifecycle statuses, and current producer compatibility | Stage 1 | `IMPLEMENTED` |
 
 ## Stage Gate Coverage
 
@@ -188,7 +190,12 @@ Performance checks are initial operating budgets, not optimization mandates. Mea
 
 ## Current Coverage Gaps
 
-Documentation coverage is complete for the current 61 requirements. Implementation has begun with fail-closed mode configuration, the pure pre-trade risk engine, operator kill assessment, and heartbeat health. Only RISK-002 is marked implemented because the broader startup, broker, reconciliation, and release evidence required by other rows is not complete. External blockers are:
+Documentation coverage is complete for the current 61 requirements.
+Implementation includes fail-closed mode configuration, the pure pre-trade risk
+engine, operator kill assessment, heartbeat health, and canonical reason/order
+contracts. RISK-002 and NFR-MNT-004 are marked implemented; broader startup,
+broker, reconciliation, and release evidence remains incomplete. External
+blockers are:
 
 - Owner approval of Stage 0 scope, weekly capacity, and base currency.
 - Exact ETF and market-data provider selection.
