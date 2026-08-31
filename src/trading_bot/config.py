@@ -11,6 +11,8 @@ from pydantic import BaseModel, ConfigDict, ValidationError
 from yaml.constructor import ConstructorError
 from yaml.nodes import MappingNode
 
+from trading_bot.domain import ReasonCode
+
 
 class OperatingMode(StrEnum):
     """Modes available before any separately approved real-money stage."""
@@ -35,7 +37,7 @@ class ConfigLoadResult:
     """A validated config or a safe halted fallback with stable reason codes."""
 
     config: RuntimeConfig
-    reason_codes: tuple[str, ...] = ()
+    reason_codes: tuple[ReasonCode, ...] = ()
 
     @property
     def is_valid(self) -> bool:
@@ -78,15 +80,15 @@ def load_runtime_config(raw: Mapping[str, object] | None) -> ConfigLoadResult:
     """Validate raw configuration and return HALTED for every invalid input."""
 
     if raw is None:
-        return ConfigLoadResult(SAFE_HALTED_CONFIG, ("MODE_CONFIG_MISSING",))
+        return ConfigLoadResult(SAFE_HALTED_CONFIG, (ReasonCode.CONFIG_MISSING,))
 
     if str(raw.get("mode", "")).upper() == "LIVE":
-        return ConfigLoadResult(SAFE_HALTED_CONFIG, ("MODE_LIVE_DENIED",))
+        return ConfigLoadResult(SAFE_HALTED_CONFIG, (ReasonCode.LIVE_DENIED,))
 
     try:
         config = RuntimeConfig.model_validate(raw)
     except ValidationError:
-        return ConfigLoadResult(SAFE_HALTED_CONFIG, ("MODE_CONFIG_INVALID",))
+        return ConfigLoadResult(SAFE_HALTED_CONFIG, (ReasonCode.CONFIG_INVALID,))
 
     return ConfigLoadResult(config)
 
@@ -98,9 +100,9 @@ def load_yaml_config(path: Path) -> ConfigLoadResult:
         with path.open(encoding="utf-8") as config_file:
             raw = yaml.load(config_file, Loader=_UniqueKeySafeLoader)
     except (OSError, yaml.YAMLError):
-        return ConfigLoadResult(SAFE_HALTED_CONFIG, ("MODE_CONFIG_INVALID",))
+        return ConfigLoadResult(SAFE_HALTED_CONFIG, (ReasonCode.CONFIG_INVALID,))
 
     if not isinstance(raw, Mapping):
-        return ConfigLoadResult(SAFE_HALTED_CONFIG, ("MODE_CONFIG_INVALID",))
+        return ConfigLoadResult(SAFE_HALTED_CONFIG, (ReasonCode.CONFIG_INVALID,))
 
     return load_runtime_config(raw)

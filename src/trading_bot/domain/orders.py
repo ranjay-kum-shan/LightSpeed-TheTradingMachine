@@ -21,6 +21,27 @@ class TimeInForce(StrEnum):
     GTC = "GTC"
 
 
+class OrderPurpose(StrEnum):
+    STRATEGY = "STRATEGY"
+    RISK_REDUCTION = "RISK_REDUCTION"
+    RECOVERY = "RECOVERY"
+
+
+class OrderStatus(StrEnum):
+    INTENT_RECORDED = "INTENT_RECORDED"
+    RISK_REJECTED = "RISK_REJECTED"
+    READY_TO_SUBMIT = "READY_TO_SUBMIT"
+    SUBMITTING = "SUBMITTING"
+    ACCEPTED = "ACCEPTED"
+    REJECTED = "REJECTED"
+    UNKNOWN = "UNKNOWN"
+    PARTIALLY_FILLED = "PARTIALLY_FILLED"
+    FILLED = "FILLED"
+    PENDING_CANCEL = "PENDING_CANCEL"
+    CANCELED = "CANCELED"
+    EXPIRED = "EXPIRED"
+
+
 @dataclass(frozen=True, slots=True)
 class OrderIntent:
     symbol: str

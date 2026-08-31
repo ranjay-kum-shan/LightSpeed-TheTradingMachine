@@ -46,7 +46,7 @@ The source review is the [Trading System Plan Review v2](docs/reference/trading-
 | Charter | Draft; Stage 0 not passed |
 | External order authorization | `PAPER_ONLY` |
 | Software implementation | Fail-closed config, CLI, pure risk engine, operator kill assessment, and heartbeat health |
-| Automated checks | Ruff and strict mypy clean; 68 tests passing |
+| Automated checks | Ruff and strict mypy clean; 79 tests passing |
 | Reference ETF and data provider | Owner decision required |
 | Paper broker | Alpaca proposed; owner eligibility and terms confirmation required |
 | Real-money capability | Absent and unauthorized |
@@ -160,14 +160,14 @@ Then stage and publish only after reviewing the output:
 ```powershell
 git add .
 git commit -m "Initial safety-first trading bot foundation"
-git remote add origin https://github.com/YOUR-USER/YOUR-REPOSITORY.git
 git push -u origin main
 ```
 
-The local repository already uses branch `main` and the configured personal
-commit email. Set `git user.name` before the first commit if Git does not already
-have one, and replace the remote placeholder with the intended personal GitHub
-repository.
+The local repository uses branch `main`, tracks the configured personal GitHub
+repository, and uses a repository-scoped personal author identity. Before
+pushing, authenticate GitHub CLI as the personal `ranjay-kum-shan` account and
+verify that account has write permission. Do not push through a work or
+organization account.
 
 No open-source license has been selected. A public repository without a license
 is visible but does not grant others permission to reuse, modify, or distribute

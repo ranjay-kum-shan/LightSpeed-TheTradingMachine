@@ -11,6 +11,7 @@ from uuid import uuid4
 from pydantic import BaseModel, ConfigDict, ValidationError, field_validator
 
 from trading_bot.config import OperatingMode
+from trading_bot.domain import ReasonCode
 from trading_bot.risk import TradingState
 
 
@@ -23,7 +24,7 @@ class KillHealth(StrEnum):
 @dataclass(frozen=True, slots=True)
 class KillAssessment:
     health: KillHealth
-    reason_code: str
+    reason_code: ReasonCode
 
     @property
     def safe_to_trade(self) -> bool:
@@ -81,7 +82,7 @@ class HeartbeatRecord(BaseModel):
 @dataclass(frozen=True, slots=True)
 class HeartbeatAssessment:
     health: HeartbeatHealth
-    reason_code: str
+    reason_code: ReasonCode
     record: HeartbeatRecord | None = None
     age: timedelta | None = None
 
@@ -94,10 +95,10 @@ def assess_operator_kill(path: Path) -> KillAssessment:
     try:
         path.stat()
     except FileNotFoundError:
-        return KillAssessment(KillHealth.CLEAR, "CONTROL_KILL_CLEAR")
+        return KillAssessment(KillHealth.CLEAR, ReasonCode.KILL_CLEAR)
     except OSError:
-        return KillAssessment(KillHealth.UNKNOWN, "CONTROL_KILL_UNKNOWN")
-    return KillAssessment(KillHealth.ACTIVE, "CONTROL_KILL_PRESENT")
+        return KillAssessment(KillHealth.UNKNOWN, ReasonCode.KILL_UNKNOWN)
+    return KillAssessment(KillHealth.ACTIVE, ReasonCode.KILL_PRESENT)
 
 
 def _write_text_atomically(path: Path, content: str) -> None:
@@ -135,33 +136,33 @@ def assess_heartbeat(
     try:
         content = path.read_text(encoding="utf-8")
     except FileNotFoundError:
-        return HeartbeatAssessment(HeartbeatHealth.MISSING, "CONTROL_HEARTBEAT_MISSING")
+        return HeartbeatAssessment(HeartbeatHealth.MISSING, ReasonCode.HEARTBEAT_MISSING)
     except OSError:
-        return HeartbeatAssessment(HeartbeatHealth.INVALID, "CONTROL_HEARTBEAT_UNREADABLE")
+        return HeartbeatAssessment(HeartbeatHealth.INVALID, ReasonCode.HEARTBEAT_UNREADABLE)
 
     try:
         record = HeartbeatRecord.from_json(content)
     except ValidationError:
-        return HeartbeatAssessment(HeartbeatHealth.INVALID, "CONTROL_HEARTBEAT_INVALID")
+        return HeartbeatAssessment(HeartbeatHealth.INVALID, ReasonCode.HEARTBEAT_INVALID)
 
     age = now_utc - record.written_at_utc
     if age < -max_future_offset:
         return HeartbeatAssessment(
             HeartbeatHealth.FUTURE,
-            "CONTROL_HEARTBEAT_FUTURE",
+            ReasonCode.HEARTBEAT_FUTURE,
             record,
             age,
         )
     if age > max_age:
         return HeartbeatAssessment(
             HeartbeatHealth.STALE,
-            "CONTROL_HEARTBEAT_STALE",
+            ReasonCode.HEARTBEAT_STALE,
             record,
             age,
         )
     return HeartbeatAssessment(
         HeartbeatHealth.HEALTHY,
-        "CONTROL_HEARTBEAT_HEALTHY",
+        ReasonCode.HEARTBEAT_HEALTHY,
         record,
         age,
     )
