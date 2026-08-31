@@ -492,6 +492,7 @@ def test_manifest_rejects_secret_like_request_keys(secret_key: str) -> None:
     [
         "page_token",
         "next_page_token",
+        "next_token",
         "continuation_token",
         "sort_key",
         "partition_key",

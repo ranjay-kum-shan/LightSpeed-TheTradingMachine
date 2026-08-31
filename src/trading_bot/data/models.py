@@ -6,10 +6,11 @@ row stays constructible. The rules enforced here, audited and enumerated:
 
 1. Representational rules, without which the value has no defined meaning:
    naive timestamps, non-finite ``float`` and ``Decimal`` values, integers
-   outside ``int64``, blank or untrimmed identity strings, malformed currency
-   codes and ``content_hash`` digests, degenerate intervals, and unsorted or
-   duplicated lineage lists. Enum membership is a static type rule only; nothing
-   here checks it at runtime.
+   outside ``int64``, a negative row count, blank or untrimmed identity strings
+   and request values, non-canonical uppercase symbols and exchanges, malformed
+   currency codes and ``content_hash`` digests, degenerate intervals, and
+   unsorted or duplicated lineage and request-key lists. Enum membership is a
+   static type rule only; nothing here checks it at runtime.
 2. One availability safety rule: a bar may not claim ``available_at_utc``
    earlier than its own ``bar_close_utc``. No ``DV-*`` rule covers availability
    ordering, so nothing downstream would catch lookahead, and unlike a crossed
