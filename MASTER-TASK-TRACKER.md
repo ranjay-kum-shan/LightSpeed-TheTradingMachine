@@ -51,7 +51,7 @@
 | Active claims | 0 | `coordination/claims/` plus Active Claims below |
 | Items in review | 0 | Integration Queue below |
 | Open incidents | 0 | Incident records |
-| Baseline commit | `20b07202cd7008c819a5d129b4b66df04b675812` | Published `origin/main` baseline |
+| Baseline commit | `2c0bf4d75fc74e701287b3c2701ec3a2a796695d` | CI-verified collaboration baseline |
 | Git remote | `https://github.com/ranjay-kum-shan/LightSpeed-TheTradingMachine.git` | Git configuration |
 
 This file is the master task index, not the requirement authority. Requirement
@@ -100,7 +100,7 @@ appropriate prior state. Reopened work moves from `DONE` to `IN_REVIEW` or
 ## Current Baseline
 
 - Local `main` tracks the personal repository and is synchronized with the
-  published integration baseline through commit `20b0720`.
+  collaboration baseline through commit `2c0bf4d`.
 - GitHub CLI is authenticated as `ranjay-kum-shan`; repository write permission
   and a normal fast-forward push were verified under the personal account.
 - Parallel claims still require the project owner to appoint an ongoing
@@ -306,7 +306,7 @@ must not bypass an external blocker or introduce real credentials.
 | EV-0007 | 31 August 2026 | TB-1003 compatibility repair | Distinct risk-only enum restored; Ruff and mypy pass; 79 tests pass; wheel contains contract modules | `coordination/handoffs/TB-1003.md` |
 | EV-0008 | 31 August 2026 | TB-1003 independent re-review | `APPROVE`; cycle-one findings resolved; command reproduction unavailable | `coordination/handoffs/TB-1003.md` |
 | EV-0009 | 31 August 2026 | TB-1003 local integration | Commit `84e869e27e9a5210fe3360494ace250530250a2e` created above remote baseline | Local Git history |
-| EV-0010 | 31 August 2026 | Personal GitHub synchronization | Active personal account and write permission verified; `main` fast-forwarded and synchronized at `20b0720` | `coordination/handoffs/TB-0006.md` |
+| EV-0010 | 31 August 2026 | Personal GitHub synchronization | Active personal account and admin permission verified; `main` synchronized through `2c0bf4d`; CI run 33379734390 passed | `coordination/handoffs/TB-0006.md` |
 
 Evidence records summarize a result; task records and handoffs must preserve the
 exact command, exit code, affected test names, and artefact identity needed for
