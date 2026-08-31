@@ -51,7 +51,7 @@
 | Active claims | 0 | `coordination/claims/` plus Active Claims below |
 | Items in review | 0 | Integration Queue below |
 | Open incidents | 0 | Incident records |
-| Baseline commit | `4ba5111d53c33343112d97af1c492b7ac087dee4` | Reviewed and integrated baseline |
+| Baseline commit | `5d98c1f73c05699023c7bd225fd6c3814f541945` | Reviewed and integrated baseline |
 | Git remote | `https://github.com/ranjay-kum-shan/LightSpeed-TheTradingMachine.git` | Git configuration |
 
 This file is the master task index, not the requirement authority. Requirement
@@ -100,26 +100,28 @@ appropriate prior state. Reopened work moves from `DONE` to `IN_REVIEW` or
 ## Current Baseline
 
 - Local `main` tracks the personal repository and is synchronized with the
-  collaboration baseline through commit `3fbc9a1`; the reviewed working baseline
-  is now `4ba5111` and is not yet pushed.
+  collaboration baseline through commit `678fdf5`; the reviewed working baseline
+  is now `5d98c1f`.
 - GitHub CLI is authenticated as `ranjay-kum-shan`; repository write permission
-  and a normal fast-forward push were verified under the personal account.
+  and a normal fast-forward push were verified under the personal account, and
+  CI run 33413279087 passed on the published baseline.
 - Parallel claims still require the project owner to appoint an ongoing
   coordinator. Until then one agent holds both the implementer and coordinator
   roles, so master-tracker edits appear inside worker commits; this is disclosed
   in each affected handoff.
 - The uploadable tree contains source, configuration, documentation, and tests;
   generated environments and caches are absent.
-- The last complete validation passed Ruff, strict mypy across 28 files, and 378
+- The last complete validation passed Ruff, strict mypy across 32 files, and 624
   tests at 100% statement and branch coverage.
 - The implemented code covers fail-closed configuration, the configuration CLI,
   canonical order values, UTC time normalization with clock and exchange-calendar
   ports, canonical market-data schemas for instruments, bars, corporate actions,
-  and dataset manifests, the pure risk engine, operator kill assessment, and
-  atomic heartbeat health.
-- `DATA-003`, `RISK-002`, and `NFR-MNT-004` are marked `IMPLEMENTED`. No
-  requirement is marked `VERIFIED` and no stage gate has passed.
-- No data ingestion, hashing, publication, broker adapter, credential,
+  and dataset manifests, the structured audit event schema with its redaction
+  boundary, the pure risk engine, operator kill assessment, and atomic heartbeat
+  health.
+- `AUD-001`, `DATA-003`, `RISK-002`, and `NFR-MNT-004` are marked `IMPLEMENTED`.
+  No requirement is marked `VERIFIED` and no stage gate has passed.
+- No data ingestion, hashing, publication, log sink, broker adapter, credential,
   network-order path, or real-money capability exists.
 
 ### Completed Subtasks
