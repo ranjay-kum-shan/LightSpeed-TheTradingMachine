@@ -50,6 +50,7 @@ The source review is the [Trading System Plan Review v2](docs/reference/trading-
 | Reference ETF and data provider | Owner decision required |
 | Paper broker | Alpaca proposed; owner eligibility and terms confirmation required |
 | Real-money capability | Absent and unauthorized |
+| GitHub synchronization | Personal `origin/main` synchronized; owner account and write permission verified |
 
 Documentation completion is not a stage pass. The next valid action is to resolve and sign the Stage 0 owner decisions in [CHARTER.md](CHARTER.md).
 
@@ -164,10 +165,10 @@ git push -u origin main
 ```
 
 The local repository uses branch `main`, tracks the configured personal GitHub
-repository, and uses a repository-scoped personal author identity. Before
-pushing, authenticate GitHub CLI as the personal `ranjay-kum-shan` account and
-verify that account has write permission. Do not push through a work or
-organization account.
+repository, and uses a repository-scoped personal author identity. The personal
+`ranjay-kum-shan` account is currently authenticated with verified write access.
+Before future pushes, confirm that this remains the active account. Do not push
+through a work or organization account.
 
 No open-source license has been selected. A public repository without a license
 is visible but does not grant others permission to reuse, modify, or distribute

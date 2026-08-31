@@ -36,22 +36,22 @@
 **Current authorization:** `PAPER_ONLY`  
 **Current gate:** Stage 0 not passed  
 **Requirement state:** 59 `SPECIFIED`, 2 `IMPLEMENTED`, 0 `VERIFIED`  
-**Parallel execution state:** `LOCAL_INTEGRATION_COMPLETE_PUSH_AUTH_REQUIRED`
+**Parallel execution state:** `BASELINE_SYNCED_COORDINATOR_APPOINTMENT_REQUIRED`
 
 ## Control Panel
 
 | Measure | Current value | Authority |
 | --- | --- | --- |
 | Total registered tasks | 41 | Task Register below |
-| `DONE` | 5 | Completed Work below |
+| `DONE` | 6 | Completed Work below |
 | `IN_PROGRESS` | 0 | Active Claims below |
 | `READY` | 7 | Parallelization Map below |
-| `BLOCKED` | 10 | Blockers and Decisions below |
+| `BLOCKED` | 9 | Blockers and Decisions below |
 | `BACKLOG` | 19 | Dependency sequencing below |
 | Active claims | 0 | `coordination/claims/` plus Active Claims below |
 | Items in review | 0 | Integration Queue below |
 | Open incidents | 0 | Incident records |
-| Baseline commit | `6dd846aa0983f31f1ed9aea04b8c15f8eb7a7b0d` | `origin/main` |
+| Baseline commit | `20b07202cd7008c819a5d129b4b66df04b675812` | Published `origin/main` baseline |
 | Git remote | `https://github.com/ranjay-kum-shan/LightSpeed-TheTradingMachine.git` | Git configuration |
 
 This file is the master task index, not the requirement authority. Requirement
@@ -99,11 +99,12 @@ appropriate prior state. Reopened work moves from `DONE` to `IN_REVIEW` or
 
 ## Current Baseline
 
-- Local `main` adopts and tracks the user-created `origin/main` baseline commit
-  `6dd846aa0983f31f1ed9aea04b8c15f8eb7a7b0d` without changing worktree files.
-- The remote is configured, but the active GitHub CLI account is not the personal
-  repository owner and has read-only access. Remote publication remains blocked
-  until the owner authenticates `ranjay-kum-shan` directly.
+- Local `main` tracks the personal repository and is synchronized with the
+  published integration baseline through commit `20b0720`.
+- GitHub CLI is authenticated as `ranjay-kum-shan`; repository write permission
+  and a normal fast-forward push were verified under the personal account.
+- Parallel claims still require the project owner to appoint an ongoing
+  coordinator. Git setup and remote publication are no longer blockers.
 - The uploadable tree contains source, configuration, documentation, and tests;
   generated environments and caches are absent.
 - The last complete validation passed Ruff, strict mypy, and 79 tests.
@@ -190,7 +191,7 @@ baseline and rerun affected validation.
 | Blocker | Affected tasks | Owner | Resolution evidence | Status |
 | --- | --- | --- | --- | --- |
 | BLK-001 Stage 0 owner decisions are unsigned | TB-0001 through TB-0005 | Project owner | Signed charter rows and accepted decision records | `OPEN` |
-| BLK-002 Personal GitHub owner authentication is unavailable locally | TB-0006 and remote publication | Project owner | Authenticate GitHub CLI as `ranjay-kum-shan` and verify push permission | `OPEN` |
+| BLK-002 Personal GitHub authentication and baseline publication | TB-0006 | Project owner | Personal account authenticated; fast-forward push verified | `CLOSED` |
 | BLK-003 ETF and data provider are unselected | TB-3001 and TB-3004 | Project owner | Qualified provider and reference instrument decision | `OPEN` |
 | BLK-004 Alpaca eligibility and terms are unconfirmed | TB-5003 | Project owner | Current account and API eligibility evidence | `OPEN` |
 | BLK-005 Secret, alert, backup, and runtime providers are unselected | TB-0005 and TB-6003 | Project owner | Accepted provider decisions | `OPEN` |
@@ -209,7 +210,7 @@ must not bypass an external blocker or introduce real credentials.
 | TB-0003 | Confirm Alpaca paper eligibility and terms | EXEC-001, DEC-012 | Owner and broker | `BLOCKED` | Unassigned | Current eligibility evidence |
 | TB-0004 | Set paper reference equity and risk values | RISK-002 | TB-0001 | `BLOCKED` | Unassigned | Owner-approved paper profile |
 | TB-0005 | Select secrets, alerts, backup, retention, and runtime paths | NFR-SEC-002, AUD-004 | Owner decisions | `BLOCKED` | Unassigned | Accepted operational provider records |
-| TB-0006 | Establish approved baseline commit and collaboration remote | Coordination protocol | Personal GitHub push authentication | `BLOCKED` | GitHub Copilot | Baseline adopted locally; authenticated push succeeds |
+| TB-0006 | Establish approved baseline commit and collaboration remote | Coordination protocol | Personal GitHub push authentication | `DONE` | GitHub Copilot | EV-0010 |
 
 ### Work Package One Foundation
 
@@ -290,6 +291,7 @@ must not bypass an external blocker or introduce real credentials.
 | TB-2001 | 31 August 2026 | `tests/test_risk_engine.py` and EV-0001 | RISK-002 marked `IMPLEMENTED` |
 | TB-2002 | 31 August 2026 | `tests/test_operations_controls.py` and EV-0001 | RISK-004 remains specified until watchdog integration |
 | TB-1003 | 31 August 2026 | Independent approval, EV-0007, EV-0008, commit `84e869e` | NFR-MNT-004 marked `IMPLEMENTED` |
+| TB-0006 | 31 August 2026 | Personal authentication, baseline adoption, and fast-forward push in EV-0010 | Parallel Git baseline established |
 
 ## Evidence Ledger
 
@@ -304,6 +306,7 @@ must not bypass an external blocker or introduce real credentials.
 | EV-0007 | 31 August 2026 | TB-1003 compatibility repair | Distinct risk-only enum restored; Ruff and mypy pass; 79 tests pass; wheel contains contract modules | `coordination/handoffs/TB-1003.md` |
 | EV-0008 | 31 August 2026 | TB-1003 independent re-review | `APPROVE`; cycle-one findings resolved; command reproduction unavailable | `coordination/handoffs/TB-1003.md` |
 | EV-0009 | 31 August 2026 | TB-1003 local integration | Commit `84e869e27e9a5210fe3360494ace250530250a2e` created above remote baseline | Local Git history |
+| EV-0010 | 31 August 2026 | Personal GitHub synchronization | Active personal account and write permission verified; `main` fast-forwarded and synchronized at `20b0720` | `coordination/handoffs/TB-0006.md` |
 
 Evidence records summarize a result; task records and handoffs must preserve the
 exact command, exit code, affected test names, and artefact identity needed for
@@ -335,3 +338,4 @@ review.
 | 31 August 2026 | Recorded independent approval for TB-1003; kept task in review pending baseline integration | GitHub Copilot | EV-0008 and BLK-002 |
 | 31 August 2026 | Configured origin and adopted user-created remote baseline without changing worktree content | GitHub Copilot | Baseline commit and 63-file manifest verification |
 | 31 August 2026 | Integrated and closed TB-1003 locally; unlocked TB-3002 | GitHub Copilot | EV-0009 |
+| 31 August 2026 | Authenticated the personal GitHub owner, fast-forwarded origin/main, and closed TB-0006 | GitHub Copilot | EV-0010 |
