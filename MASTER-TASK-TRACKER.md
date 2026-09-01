@@ -38,7 +38,7 @@
 | Current authorization | `PAPER_ONLY` |
 | Current gate | Stage 0 not passed |
 | Requirement state | 57 `SPECIFIED`, 4 `IMPLEMENTED`, 0 `VERIFIED` |
-| Parallel execution state | `BASELINE_INTEGRATED_PUBLICATION_PENDING` |
+| Parallel execution state | `BASELINE_SYNCED_NEXT_TASK_READY` |
 
 ## Control Panel
 
@@ -53,7 +53,7 @@
 | Active claims | 0 | `coordination/claims/` plus Active Claims below |
 | Items in review | 0 | Integration Queue below |
 | Open incidents | 0 | Incident records |
-| Baseline commit | `8497ebf14ee6c5663aa2ca4f348deb79c4dfdef8` | Integrated TB-1006 implementation |
+| Baseline commit | `004e10799738819190b607a3622b3c186baca1c3` | Published TB-1006 coordinator closure |
 | Git remote | `https://github.com/ranjay-kum-shan/LightSpeed-TheTradingMachine.git` | Git configuration |
 
 This file is the master task index, not the requirement authority. Requirement
@@ -101,11 +101,11 @@ appropriate prior state. Reopened work moves from `DONE` to `IN_REVIEW` or
 
 ## Current Baseline
 
-- Local `main` contains the reviewed TB-1006 implementation through commit
-  `8497ebf`; publication of the coordinator closure is pending.
+- Local `main` and `origin/main` contain the reviewed TB-1006 implementation and
+  coordinator closure through commit `004e107`.
 - GitHub CLI is authenticated as `ranjay-kum-shan`; repository write permission
   and a normal fast-forward push were verified under the personal account, and
-  CI run 33413279087 passed on the published baseline.
+  CI run 33511994494 passed on the published baseline.
 - Parallel claims still require the project owner to appoint an ongoing
   coordinator. Until then one agent holds both the implementer and coordinator
   roles, so master-tracker edits appear inside worker commits; this is disclosed
@@ -347,6 +347,7 @@ must not bypass an external blocker or introduce real credentials.
 | EV-0030 | 1 September 2026 | TB-1006 SQLite and atomic-storage foundation | Ruff pass, strict mypy pass across 37 files, 656 tests pass at 100% statement and branch coverage; temporary wheel and sdist built, and the wheel contains all four storage modules | `coordination/handoffs/TB-1006.md` |
 | EV-0031 | 1 September 2026 | TB-1006 independent review | `APPROVE` after one `CHANGES_REQUESTED` cycle; raw-connection commit and lineage bypass replaced by a restricted transaction facade, with no Critical or Major finding remaining | `coordination/handoffs/TB-1006.md` |
 | EV-0032 | 1 September 2026 | TB-1006 local integration | Fast-forwarded `main` to `8497ebf`; locked sync, Ruff, strict mypy over 37 files, 656 tests at 100% statement and branch coverage, temporary wheel and sdist build, and wheel-content check all passed | `coordination/handoffs/TB-1006.md` |
+| EV-0033 | 1 September 2026 | Published TB-1006 baseline | Commits through `004e107` pushed to `origin/main`; CI run 33511994494 completed successfully | GitHub Actions run 33511994494 |
 
 Evidence records summarize a result; task records and handoffs must preserve the
 exact command, exit code, affected test names, and artefact identity needed for
@@ -394,3 +395,4 @@ review.
 | 1 September 2026 | Reconciled the synchronized baseline to `149444a` and started TB-1006 in sequential mode without asserting a parallel claim | GitHub Copilot | Clean branch preflight and 624-test baseline |
 | 1 September 2026 | Submitted independently approved TB-1006 for integration; left STATE-001 and NFR-REP-002 specified and DEC-014 proposed | GitHub Copilot | EV-0030 and EV-0031 |
 | 1 September 2026 | Integrated and closed TB-1006, kept linked requirements specified, and promoted TB-2003 to `READY` | GitHub Copilot | EV-0032 |
+| 1 September 2026 | Published the TB-1006 coordinator closure and confirmed CI success on the synchronized baseline | GitHub Copilot | EV-0033 |
