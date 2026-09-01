@@ -38,7 +38,7 @@
 | Current authorization | `PAPER_ONLY` |
 | Current gate | Stage 0 not passed |
 | Requirement state | 57 `SPECIFIED`, 4 `IMPLEMENTED`, 0 `VERIFIED` |
-| Parallel execution state | `BASELINE_INTEGRATED_PUBLICATION_PENDING` |
+| Parallel execution state | `BASELINE_SYNCED_NEXT_TASK_READY` |
 
 ## Control Panel
 
@@ -53,7 +53,7 @@
 | Active claims | 0 | `coordination/claims/` plus Active Claims below |
 | Items in review | 0 | Integration Queue below |
 | Open incidents | 0 | Incident records |
-| Baseline commit | `45721244ecf0fdf5021cee6ab0d0f7a513a54ca1` | Integrated TB-2003 implementation |
+| Baseline commit | `eca758a66ac4a3442cd9f135b4bd61ec6bc9ab21` | Published TB-2003 coordinator closure |
 | Git remote | `https://github.com/ranjay-kum-shan/LightSpeed-TheTradingMachine.git` | Git configuration |
 
 This file is the master task index, not the requirement authority. Requirement
@@ -101,11 +101,11 @@ appropriate prior state. Reopened work moves from `DONE` to `IN_REVIEW` or
 
 ## Current Baseline
 
-- Local `main` contains the reviewed TB-2003 implementation through commit
-  `4572124`; publication of the coordinator closure is pending.
+- Local `main` and `origin/main` contain the reviewed TB-2003 implementation and
+  coordinator closure through commit `eca758a`.
 - GitHub CLI is authenticated as `ranjay-kum-shan`; repository write permission
   and a normal fast-forward push were verified under the personal account, and
-  CI run 33511994494 passed on the published baseline.
+  CI run 33519054528 passed on Python 3.12 and 3.14 for the published baseline.
 - Parallel claims still require the project owner to appoint an ongoing
   coordinator. Until then one agent holds both the implementer and coordinator
   roles, so master-tracker edits appear inside worker commits; this is disclosed
@@ -352,6 +352,7 @@ must not bypass an external blocker or introduce real credentials.
 | EV-0034 | 1 September 2026 | TB-2003 durable risk state | Ruff pass, strict mypy pass across 39 files, 718 tests pass at 100% statement and branch coverage; temporary wheel and sdist built with risk state included | `coordination/handoffs/TB-2003.md` |
 | EV-0035 | 1 September 2026 | TB-2003 independent review | `APPROVE` after three `CHANGES_REQUESTED` decisions; Decimal identity, durable evidence, immutable profile, opening-flow, and pre-trade mapping blockers all closed | `coordination/handoffs/TB-2003.md` |
 | EV-0036 | 1 September 2026 | TB-2003 local integration | Fast-forwarded `main` to `4572124` after one transient OneDrive index-lock retry; locked sync, Ruff, strict mypy over 39 files, 718 tests at 100%, wheel and sdist build, and exact wheel-content checks passed | `coordination/handoffs/TB-2003.md` |
+| EV-0037 | 1 September 2026 | Published TB-2003 baseline | Commits through `eca758a` pushed to `origin/main`; CI run 33519054528 passed locked sync, Ruff, mypy, 718 tests, and package build on Python 3.12 and 3.14 | GitHub Actions run 33519054528 |
 
 Evidence records summarize a result; task records and handoffs must preserve the
 exact command, exit code, affected test names, and artefact identity needed for
@@ -403,3 +404,4 @@ review.
 | 1 September 2026 | Started TB-2003 in sequential mode from `8cf7c08`; no parallel claim asserted | GitHub Copilot | Clean branch preflight and 68-test risk baseline |
 | 1 September 2026 | Submitted independently approved TB-2003 for integration; kept RISK-004 and NFR-SAFE-001 specified | GitHub Copilot | EV-0034 and EV-0035 |
 | 1 September 2026 | Integrated and closed TB-2003; kept linked requirements specified pending watchdog and startup integration | GitHub Copilot | EV-0036 |
+| 1 September 2026 | Published the TB-2003 coordinator closure and confirmed the full CI matrix on both supported interpreter bounds | GitHub Copilot | EV-0037 |
