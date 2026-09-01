@@ -38,22 +38,22 @@
 | Current authorization | `PAPER_ONLY` |
 | Current gate | Stage 0 not passed |
 | Requirement state | 57 `SPECIFIED`, 4 `IMPLEMENTED`, 0 `VERIFIED` |
-| Parallel execution state | `SEQUENTIAL_TB_2003_IN_REVIEW` |
+| Parallel execution state | `BASELINE_INTEGRATED_PUBLICATION_PENDING` |
 
 ## Control Panel
 
 | Measure | Current value | Authority |
 | --- | --- | --- |
 | Total registered tasks | 41 | Task Register below |
-| `DONE` | 10 | Completed Work below |
+| `DONE` | 11 | Completed Work below |
 | `IN_PROGRESS` | 0 | Active Claims below |
 | `READY` | 4 | Parallelization Map below |
 | `BLOCKED` | 9 | Blockers and Decisions below |
 | `BACKLOG` | 17 | Dependency sequencing below |
 | Active claims | 0 | `coordination/claims/` plus Active Claims below |
-| Items in review | 1 | Integration Queue below |
+| Items in review | 0 | Integration Queue below |
 | Open incidents | 0 | Incident records |
-| Baseline commit | `004e10799738819190b607a3622b3c186baca1c3` | Published TB-1006 coordinator closure |
+| Baseline commit | `45721244ecf0fdf5021cee6ab0d0f7a513a54ca1` | Integrated TB-2003 implementation |
 | Git remote | `https://github.com/ranjay-kum-shan/LightSpeed-TheTradingMachine.git` | Git configuration |
 
 This file is the master task index, not the requirement authority. Requirement
@@ -101,8 +101,8 @@ appropriate prior state. Reopened work moves from `DONE` to `IN_REVIEW` or
 
 ## Current Baseline
 
-- Local `main` and `origin/main` contain the reviewed TB-1006 implementation and
-  coordinator closure through commit `004e107`.
+- Local `main` contains the reviewed TB-2003 implementation through commit
+  `4572124`; publication of the coordinator closure is pending.
 - GitHub CLI is authenticated as `ranjay-kum-shan`; repository write permission
   and a normal fast-forward push were verified under the personal account, and
   CI run 33511994494 passed on the published baseline.
@@ -112,7 +112,7 @@ appropriate prior state. Reopened work moves from `DONE` to `IN_REVIEW` or
   in each affected handoff.
 - The uploadable tree contains source, configuration, documentation, and tests;
   generated environments and caches are absent.
-- The last complete validation passed Ruff, strict mypy across 37 files, and 656
+- The last complete validation passed Ruff, strict mypy across 39 files, and 718
   tests at 100% statement and branch coverage.
 - The implemented code covers fail-closed configuration, the configuration CLI,
   canonical order values, UTC time normalization with clock and exchange-calendar
@@ -120,7 +120,8 @@ appropriate prior state. Reopened work moves from `DONE` to `IN_REVIEW` or
   and dataset manifests, the structured audit event schema with its redaction
   boundary, the pure risk engine, operator kill assessment, and atomic heartbeat
   health, plus checksummed SQLite migrations, restricted transactions, and
-  atomic local-file replacement.
+  atomic local-file replacement. Durable risk state now preserves capital-flow-
+  adjusted daily loss, high water, profile identity, and sticky halt evidence.
 - `AUD-001`, `DATA-003`, `RISK-002`, and `NFR-MNT-004` are marked `IMPLEMENTED`.
   No requirement is marked `VERIFIED` and no stage gate has passed.
 - No data ingestion, hashing, publication, log sink, broker adapter, credential,
@@ -193,7 +194,7 @@ reconcile them before editing.
 
 | Order | Task | Branch or PR | Reviewer | Validation status | Conflict notes | Decision |
 | --- | --- | --- | --- | --- | --- | --- |
-| 1 | TB-2003 | `task/TB-2003-durable-risk-state` (uncommitted) | Independent review agents | EV-0034 passed | Shared risk contracts; integrate before TB-5002 | `APPROVE`; commit and integration pending |
+| - | None | - | - | - | - | Queue empty |
 
 The coordinator orders integration by dependency and shared-file risk, not by
 completion time. Downstream branches rebase or merge from the newly integrated
@@ -242,7 +243,7 @@ must not bypass an external blocker or introduce real credentials.
 | --- | --- | --- | --- | --- | --- | --- |
 | TB-2001 | Coherent snapshot, projected exposure, and all hard limits | RISK-001, RISK-002, RISK-003 | TB-1002 | `DONE` | Initial implementation | RISK-002 marked implemented |
 | TB-2002 | Operator kill assessment and atomic heartbeat health | RISK-004 | TB-1002 | `DONE` | Initial implementation | Primitive control tests pass |
-| TB-2003 | Durable sticky halt, daily-loss, and drawdown state | RISK-004, NFR-SAFE-001 | TB-1006, TB-2001 | `IN_REVIEW` | GitHub Copilot (sequential) | Commit and integrate approved working tree |
+| TB-2003 | Durable sticky halt, daily-loss, and drawdown state | RISK-004, NFR-SAFE-001 | TB-1006, TB-2001 | `DONE` | GitHub Copilot (sequential) | EV-0034 through EV-0036 |
 | TB-2004 | Independent watchdog policy, cancellation port, and fake | RISK-004, NFR-REL-003 | TB-2002 | `READY` | Unassigned | Stale heartbeat alerts and cancels known orders only |
 | TB-2005 | Risk bypass, import-boundary, mutation, and latency checks | RISK-005, NFR-PERF-002 | TB-2001 | `READY` | Unassigned | No adapter path and risk p95 under target |
 
@@ -309,6 +310,7 @@ must not bypass an external blocker or introduce real credentials.
 | TB-3002 | 31 August 2026 | Three independent review cycles closed by EV-0019 at commit `4ba5111` | No requirement promoted; DATA-001 and DATA-004 stay `SPECIFIED` pending TB-3005 and TB-3006 |
 | TB-1005 | 31 August 2026 | Four independent review cycles closed by EV-0028 and EV-0029 | AUD-001 marked `IMPLEMENTED` for its schema half; NFR-SEC-004 stays `SPECIFIED` because a name-based guard cannot be complete and no sink writes through it |
 | TB-1006 | 1 September 2026 | Independent approval, EV-0030 through EV-0032, commit `8497ebf` | No requirement promoted; STATE-001 and NFR-REP-002 stay `SPECIFIED` pending concrete consumers |
+| TB-2003 | 1 September 2026 | Four review/remediation cycles, EV-0034 through EV-0036, commit `4572124` | No requirement promoted; RISK-004 and NFR-SAFE-001 stay `SPECIFIED` pending broader control paths |
 
 ## Evidence Ledger
 
@@ -349,6 +351,7 @@ must not bypass an external blocker or introduce real credentials.
 | EV-0033 | 1 September 2026 | Published TB-1006 baseline | Commits through `004e107` pushed to `origin/main`; CI run 33511994494 completed successfully | GitHub Actions run 33511994494 |
 | EV-0034 | 1 September 2026 | TB-2003 durable risk state | Ruff pass, strict mypy pass across 39 files, 718 tests pass at 100% statement and branch coverage; temporary wheel and sdist built with risk state included | `coordination/handoffs/TB-2003.md` |
 | EV-0035 | 1 September 2026 | TB-2003 independent review | `APPROVE` after three `CHANGES_REQUESTED` decisions; Decimal identity, durable evidence, immutable profile, opening-flow, and pre-trade mapping blockers all closed | `coordination/handoffs/TB-2003.md` |
+| EV-0036 | 1 September 2026 | TB-2003 local integration | Fast-forwarded `main` to `4572124` after one transient OneDrive index-lock retry; locked sync, Ruff, strict mypy over 39 files, 718 tests at 100%, wheel and sdist build, and exact wheel-content checks passed | `coordination/handoffs/TB-2003.md` |
 
 Evidence records summarize a result; task records and handoffs must preserve the
 exact command, exit code, affected test names, and artefact identity needed for
@@ -399,3 +402,4 @@ review.
 | 1 September 2026 | Published the TB-1006 coordinator closure and confirmed CI success on the synchronized baseline | GitHub Copilot | EV-0033 |
 | 1 September 2026 | Started TB-2003 in sequential mode from `8cf7c08`; no parallel claim asserted | GitHub Copilot | Clean branch preflight and 68-test risk baseline |
 | 1 September 2026 | Submitted independently approved TB-2003 for integration; kept RISK-004 and NFR-SAFE-001 specified | GitHub Copilot | EV-0034 and EV-0035 |
+| 1 September 2026 | Integrated and closed TB-2003; kept linked requirements specified pending watchdog and startup integration | GitHub Copilot | EV-0036 |
