@@ -30,13 +30,15 @@
 
 ---
 
-**Tracker version:** 1.0  
-**Last reconciled:** 31 August 2026  
-**Coordinator:** `GitHub Copilot (sequential session only)`  
-**Current authorization:** `PAPER_ONLY`  
-**Current gate:** Stage 0 not passed  
-**Requirement state:** 57 `SPECIFIED`, 4 `IMPLEMENTED`, 0 `VERIFIED`  
-**Parallel execution state:** `BASELINE_SYNCED_COORDINATOR_APPOINTMENT_REQUIRED`
+| Tracker field | Value |
+| --- | --- |
+| Version | 1.0 |
+| Last reconciled | 1 September 2026 |
+| Coordinator | `GitHub Copilot (sequential session only)` |
+| Current authorization | `PAPER_ONLY` |
+| Current gate | Stage 0 not passed |
+| Requirement state | 57 `SPECIFIED`, 4 `IMPLEMENTED`, 0 `VERIFIED` |
+| Parallel execution state | `SEQUENTIAL_TB_1006_IN_REVIEW` |
 
 ## Control Panel
 
@@ -45,13 +47,13 @@
 | Total registered tasks | 41 | Task Register below |
 | `DONE` | 9 | Completed Work below |
 | `IN_PROGRESS` | 0 | Active Claims below |
-| `READY` | 5 | Parallelization Map below |
+| `READY` | 4 | Parallelization Map below |
 | `BLOCKED` | 9 | Blockers and Decisions below |
 | `BACKLOG` | 18 | Dependency sequencing below |
 | Active claims | 0 | `coordination/claims/` plus Active Claims below |
-| Items in review | 0 | Integration Queue below |
+| Items in review | 1 | Integration Queue below |
 | Open incidents | 0 | Incident records |
-| Baseline commit | `5d98c1f73c05699023c7bd225fd6c3814f541945` | Reviewed and integrated baseline |
+| Baseline commit | `149444ae8564a87d6e6432b376efe60f0937f1b8` | Synchronized coordinator baseline |
 | Git remote | `https://github.com/ranjay-kum-shan/LightSpeed-TheTradingMachine.git` | Git configuration |
 
 This file is the master task index, not the requirement authority. Requirement
@@ -100,8 +102,7 @@ appropriate prior state. Reopened work moves from `DONE` to `IN_REVIEW` or
 ## Current Baseline
 
 - Local `main` tracks the personal repository and is synchronized with the
-  collaboration baseline through commit `678fdf5`; the reviewed working baseline
-  is now `5d98c1f`.
+  reviewed coordinator baseline through commit `149444a`.
 - GitHub CLI is authenticated as `ranjay-kum-shan`; repository write permission
   and a normal fast-forward push were verified under the personal account, and
   CI run 33413279087 passed on the published baseline.
@@ -165,9 +166,6 @@ must be handed to the coordinator for integration.
 
 | Task | Lane | Primary write scope | Required coordination |
 | --- | --- | --- | --- |
-| TB-1005 | Audit | `src/trading_bot/audit/**`, matching tests | Do not log arbitrary config or SDK objects |
-| TB-1005 | Audit | `src/trading_bot/audit/**`, matching tests | Do not log arbitrary config or SDK objects |
-| TB-1006 | Storage | `src/trading_bot/storage/**`, matching tests | Own SQLite migrations and atomic persistence contracts |
 | TB-2004 | Watchdog | `src/trading_bot/operations/watchdog.py`, matching tests | No broker calls; use a cancellation port and fake only |
 | TB-2005 | Quality | Import-boundary and performance tests | Coordinate any production-code change separately |
 | TB-3003 | Calendar data | `src/trading_bot/data/calendars/**`, matching tests | Build on the delivered `ExchangeCalendar` port; `src/trading_bot/data/__init__.py` is now shared |
@@ -194,7 +192,7 @@ reconcile them before editing.
 
 | Order | Task | Branch or PR | Reviewer | Validation status | Conflict notes | Decision |
 | --- | --- | --- | --- | --- | --- | --- |
-| - | None | - | - | - | - | Queue empty |
+| 1 | TB-1006 | `task/TB-1006-sqlite-storage` (uncommitted) | Independent review agent | EV-0030 passed | New package; tracker is the only shared file | `APPROVE`; commit and integration pending |
 
 The coordinator orders integration by dependency and shared-file risk, not by
 completion time. Downstream branches rebase or merge from the newly integrated
@@ -235,7 +233,7 @@ must not bypass an external blocker or introduce real credentials.
 | TB-1003 | Complete canonical domain values and reason-code registry | NFR-MNT-004 | TB-1002 | `DONE` | GitHub Copilot (sequential) | EV-0007 through EV-0009 |
 | TB-1004 | UTC clock port and deterministic test clock | DATA-003, EXEC-006 | TB-1001 | `DONE` | GitHub Copilot (sequential) | EV-0012 and EV-0013 |
 | TB-1005 | Structured audit schema and redaction boundary | AUD-001, NFR-SEC-004 | TB-1002 | `DONE` | GitHub Copilot (sequential) | EV-0020 through EV-0029 |
-| TB-1006 | SQLite migrations, transaction boundary, and atomic storage | STATE-001, NFR-REP-002 | TB-1001 | `READY` | Unassigned | Replayable migration and commit-failure tests |
+| TB-1006 | SQLite migrations, transaction boundary, and atomic storage | STATE-001, NFR-REP-002 | TB-1001 | `IN_REVIEW` | GitHub Copilot (sequential) | Commit and integrate approved working tree |
 
 ### Work Package Two Risk and Control
 
@@ -343,6 +341,8 @@ must not bypass an external blocker or introduce real credentials.
 | EV-0027 | 31 August 2026 | TB-1005 cycle-three remediation | Structure-aware value scanner replaces the regex value class; the value scan moved out of the regex so cost is linear; one scan budget shared across every field; no marker for an absent value; 21 compound credential names added. Ruff pass, strict mypy pass across 32 files, 617 tests pass at 100% statement and branch coverage; 64 KB of delimiter-dense input costs 36.5 ms against 598.7 ms | `coordination/handoffs/TB-1005.md` |
 | EV-0028 | 31 August 2026 | TB-1005 independent review cycle four | `APPROVE_WITH_KNOWN_OPEN`; the structured-value escape, quadratic scan, per-field budget, and name-coverage gap all verified closed; 19 of 24 realistic carriers lose nothing beyond the credential; scan growth at most 2.07 times per doubling; all five mutations killed | `coordination/handoffs/TB-1005.md` |
 | EV-0029 | 31 August 2026 | TB-1005 cycle-four remediation | Folded and indented continuations and PEM bodies now masked whole; the field rule runs before the URL rule so no marker truncates a later scan. Ruff pass, strict mypy pass across 32 files, 624 tests pass at 100% statement and branch coverage; six escape carriers masked and seven non-regressions plus idempotency confirmed | `coordination/handoffs/TB-1005.md` |
+| EV-0030 | 1 September 2026 | TB-1006 SQLite and atomic-storage foundation | Ruff pass, strict mypy pass across 37 files, 656 tests pass at 100% statement and branch coverage; temporary wheel and sdist built, and the wheel contains all four storage modules | `coordination/handoffs/TB-1006.md` |
+| EV-0031 | 1 September 2026 | TB-1006 independent review | `APPROVE` after one `CHANGES_REQUESTED` cycle; raw-connection commit and lineage bypass replaced by a restricted transaction facade, with no Critical or Major finding remaining | `coordination/handoffs/TB-1006.md` |
 
 Evidence records summarize a result; task records and handoffs must preserve the
 exact command, exit code, affected test names, and artefact identity needed for
@@ -387,3 +387,5 @@ review.
 | 31 August 2026 | Returned TB-1005 a second time after a Critical header-list escape and an untested scheme table, then resubmitted it | GitHub Copilot | EV-0024 and EV-0025 |
 | 31 August 2026 | Returned TB-1005 a third time after a Critical structured-value escape and a reintroduced quadratic scan, then resubmitted it | GitHub Copilot | EV-0026 and EV-0027 |
 | 31 August 2026 | Approved, integrated, and closed TB-1005 after four review cycles; recorded nine known-open items and moved AUD-001 to `IMPLEMENTED` | GitHub Copilot | EV-0028 and EV-0029 |
+| 1 September 2026 | Reconciled the synchronized baseline to `149444a` and started TB-1006 in sequential mode without asserting a parallel claim | GitHub Copilot | Clean branch preflight and 624-test baseline |
+| 1 September 2026 | Submitted independently approved TB-1006 for integration; left STATE-001 and NFR-REP-002 specified and DEC-014 proposed | GitHub Copilot | EV-0030 and EV-0031 |
