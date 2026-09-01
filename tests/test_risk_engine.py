@@ -1,4 +1,4 @@
-from dataclasses import replace
+from dataclasses import MISSING, fields, replace
 from datetime import UTC, datetime, time, timedelta
 from decimal import Decimal
 from typing import Any
@@ -13,9 +13,12 @@ from trading_bot.risk import (
     PendingOrder,
     Position,
     RiskEngine,
+    RiskHaltState,
     RiskLimits,
     RiskReason,
     RiskSnapshot,
+    RiskState,
+    RiskStateError,
     TradingState,
 )
 
@@ -59,8 +62,11 @@ def make_snapshot() -> RiskSnapshot:
         current_equity=Decimal("100000"),
         session_start_equity=Decimal("100000"),
         high_water_equity=Decimal("100000"),
+        net_external_flow=Decimal(0),
         orders_last_minute=0,
         trading_state=TradingState.RUNNING,
+        durable_halt_state=RiskHaltState.CLEAR,
+        durable_halt_reason=None,
         is_reconciled=True,
         has_unknown_orders=False,
         internal_halt=False,
@@ -368,6 +374,136 @@ def test_rate_loss_drawdown_or_liquidity_failure_rejects_order(
     assert_rejected(decision.reason_codes, reason)
 
 
+@pytest.mark.parametrize(
+    ("current_equity", "net_external_flow", "daily_loss_rejected"),
+    [
+        (Decimal("99000"), Decimal("-1000"), False),
+        (Decimal("100000"), Decimal("1000"), True),
+    ],
+)
+def test_daily_loss_excludes_signed_external_capital_flows(
+    limits: RiskLimits,
+    snapshot: RiskSnapshot,
+    current_equity: Decimal,
+    net_external_flow: Decimal,
+    daily_loss_rejected: bool,
+) -> None:
+    adjusted_snapshot = replace(
+        snapshot,
+        current_equity=current_equity,
+        net_external_flow=net_external_flow,
+    )
+
+    decision = RiskEngine(limits).evaluate(make_intent(), adjusted_snapshot)
+
+    assert (RiskReason.DAILY_LOSS in decision.reason_codes) is daily_loss_rejected
+
+
+def test_net_external_flow_has_no_silent_default() -> None:
+    external_flow_field = next(
+        field for field in fields(RiskSnapshot) if field.name == "net_external_flow"
+    )
+
+    assert external_flow_field.default is MISSING
+
+
+def test_durable_hard_halt_mapping_prevents_runtime_snapshot_bypass(
+    limits: RiskLimits,
+    snapshot: RiskSnapshot,
+) -> None:
+    durable_state = RiskState(
+        scope_id="scope-1",
+        session_id="2026-09-01",
+        session_start_equity=Decimal("100000"),
+        current_risk_equity=Decimal("101000"),
+        high_water_equity=Decimal("101000"),
+        net_external_flow=Decimal(0),
+        halt_state=RiskHaltState.HARD_HALTED,
+        halt_reason=RiskReason.NOT_RECONCILED,
+        revision=2,
+        updated_at_utc=NOW,
+    )
+
+    enforced = durable_state.enforce_snapshot(snapshot)
+    decision = RiskEngine(limits).evaluate(make_intent(), enforced)
+
+    assert enforced.trading_state is TradingState.HARD_HALTED
+    assert enforced.internal_halt
+    assert enforced.durable_halt_state is RiskHaltState.HARD_HALTED
+    assert not decision.approved
+    assert RiskReason.NOT_RECONCILED in decision.reason_codes
+
+
+def test_durable_daily_halt_maps_once_into_pretrade_denial(
+    limits: RiskLimits,
+    snapshot: RiskSnapshot,
+) -> None:
+    durable_state = RiskState(
+        scope_id="scope-1",
+        session_id="2026-09-01",
+        session_start_equity=Decimal("100000"),
+        current_risk_equity=Decimal("99000"),
+        high_water_equity=Decimal("100000"),
+        net_external_flow=Decimal(0),
+        halt_state=RiskHaltState.LOSS_HALTED,
+        halt_reason=RiskReason.DAILY_LOSS,
+        revision=2,
+        updated_at_utc=NOW,
+    )
+
+    enforced = durable_state.enforce_snapshot(snapshot)
+    decision = RiskEngine(limits).evaluate(make_intent(), enforced)
+
+    assert enforced.trading_state is TradingState.LOSS_HALTED
+    assert enforced.internal_halt
+    assert not decision.approved
+    assert decision.reason_codes.count(RiskReason.DAILY_LOSS) == 1
+
+
+def test_durable_state_cannot_be_applied_to_an_older_snapshot(
+    snapshot: RiskSnapshot,
+) -> None:
+    durable_state = RiskState(
+        scope_id="scope-1",
+        session_id="2026-09-01",
+        session_start_equity=Decimal("100000"),
+        current_risk_equity=Decimal("100000"),
+        high_water_equity=Decimal("100000"),
+        net_external_flow=Decimal(0),
+        halt_state=RiskHaltState.CLEAR,
+        halt_reason=None,
+        revision=2,
+        updated_at_utc=NOW + timedelta(seconds=1),
+    )
+
+    with pytest.raises(RiskStateError, match="predates durable risk state"):
+        durable_state.enforce_snapshot(snapshot)
+
+
+def test_clear_durable_state_preserves_running_snapshot(
+    snapshot: RiskSnapshot,
+) -> None:
+    durable_state = RiskState(
+        scope_id="scope-1",
+        session_id="2026-09-01",
+        session_start_equity=Decimal("100000"),
+        current_risk_equity=Decimal("100500"),
+        high_water_equity=Decimal("101000"),
+        net_external_flow=Decimal("500"),
+        halt_state=RiskHaltState.CLEAR,
+        halt_reason=None,
+        revision=2,
+        updated_at_utc=NOW,
+    )
+
+    enforced = durable_state.enforce_snapshot(snapshot)
+
+    assert enforced.trading_state is TradingState.RUNNING
+    assert not enforced.internal_halt
+    assert enforced.current_equity == Decimal("100500")
+    assert enforced.net_external_flow == Decimal("500")
+
+
 def test_risk_limits_have_no_capital_dependent_defaults() -> None:
     with pytest.raises(TypeError):
         RiskLimits()  # type: ignore[call-arg]
@@ -448,6 +584,28 @@ def test_risk_limits_allow_leverage_above_one_only_with_margin() -> None:
         ({"current_equity": Decimal("0")}, "current_equity"),
         ({"session_start_equity": Decimal("-1")}, "session_start_equity"),
         ({"high_water_equity": Decimal("NaN")}, "high_water_equity"),
+        ({"net_external_flow": Decimal("NaN")}, "net_external_flow"),
+        (
+            {
+                "durable_halt_state": RiskHaltState.CLEAR,
+                "durable_halt_reason": RiskReason.DAILY_LOSS,
+            },
+            "present exactly when halted",
+        ),
+        (
+            {
+                "durable_halt_state": RiskHaltState.LOSS_HALTED,
+                "durable_halt_reason": RiskReason.DRAWDOWN,
+            },
+            "durable LOSS_HALTED",
+        ),
+        (
+            {
+                "durable_halt_state": RiskHaltState.HARD_HALTED,
+                "durable_halt_reason": RiskReason.APPROVED,
+            },
+            "durable HARD_HALTED",
+        ),
         ({"orders_last_minute": -1}, "orders_last_minute"),
         (
             {

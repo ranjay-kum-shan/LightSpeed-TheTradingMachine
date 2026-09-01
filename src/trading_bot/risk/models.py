@@ -18,6 +18,14 @@ class TradingState(StrEnum):
     HALTED = "HALTED"
 
 
+class RiskHaltState(StrEnum):
+    """Persisted halt severity, separate from transient runtime state."""
+
+    CLEAR = "CLEAR"
+    LOSS_HALTED = "LOSS_HALTED"
+    HARD_HALTED = "HARD_HALTED"
+
+
 class RiskReason(StrEnum):
     """Backward-compatible risk-only view backed by canonical reason values."""
 
@@ -190,8 +198,11 @@ class RiskSnapshot:
     current_equity: Decimal
     session_start_equity: Decimal
     high_water_equity: Decimal
+    net_external_flow: Decimal
     orders_last_minute: int
     trading_state: TradingState
+    durable_halt_state: RiskHaltState
+    durable_halt_reason: RiskReason | None
     is_reconciled: bool
     has_unknown_orders: bool
     internal_halt: bool
@@ -209,6 +220,22 @@ class RiskSnapshot:
         _require_positive(self.current_equity, "current_equity")
         _require_positive(self.session_start_equity, "session_start_equity")
         _require_positive(self.high_water_equity, "high_water_equity")
+        if not self.net_external_flow.is_finite():
+            raise ValueError("net_external_flow must be finite")
+        if (self.durable_halt_state is RiskHaltState.CLEAR) != (
+            self.durable_halt_reason is None
+        ):
+            raise ValueError("durable_halt_reason must be present exactly when halted")
+        if (
+            self.durable_halt_state is RiskHaltState.LOSS_HALTED
+            and self.durable_halt_reason is not RiskReason.DAILY_LOSS
+        ):
+            raise ValueError("durable LOSS_HALTED requires the daily-loss reason")
+        if (
+            self.durable_halt_state is RiskHaltState.HARD_HALTED
+            and self.durable_halt_reason in (RiskReason.APPROVED, RiskReason.DAILY_LOSS)
+        ):
+            raise ValueError("durable HARD_HALTED requires a hard rejection reason")
         if self.orders_last_minute < 0:
             raise ValueError("orders_last_minute must not be negative")
 

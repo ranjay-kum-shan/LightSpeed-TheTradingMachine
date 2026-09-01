@@ -8,6 +8,7 @@ from zoneinfo import ZoneInfo
 from trading_bot.domain import OrderIntent, Side
 from trading_bot.risk.models import (
     RiskDecision,
+    RiskHaltState,
     RiskLimits,
     RiskReason,
     RiskSnapshot,
@@ -34,6 +35,11 @@ class RiskEngine:
 
         if snapshot.trading_state is not TradingState.RUNNING:
             reasons.append(RiskReason.MODE_NOT_RUNNING)
+        if (
+            snapshot.durable_halt_state is not RiskHaltState.CLEAR
+            and snapshot.durable_halt_reason is not None
+        ):
+            reasons.append(snapshot.durable_halt_reason)
         if snapshot.internal_halt:
             reasons.append(RiskReason.INTERNAL_HALT)
         if snapshot.operator_kill:
@@ -152,10 +158,14 @@ class RiskEngine:
             ):
                 reasons.append(RiskReason.ADV)
 
-        # Deposits and withdrawals are not yet separated from trading PnL; TB-2003 owns that.
+        daily_pnl = (
+            snapshot.current_equity
+            - snapshot.session_start_equity
+            - snapshot.net_external_flow
+        )
         daily_loss = max(
             Decimal(0),
-            snapshot.session_start_equity - snapshot.current_equity,
+            -daily_pnl,
         )
         if daily_loss >= self._limits.max_daily_loss:
             reasons.append(RiskReason.DAILY_LOSS)
@@ -170,7 +180,7 @@ class RiskEngine:
 
         return RiskDecision(
             approved=not reasons,
-            reason_codes=tuple(reasons),
+            reason_codes=tuple(dict.fromkeys(reasons)),
             projected_position_quantity=projected_position_quantity,
             projected_gross_exposure=projected_gross_exposure,
             projected_net_exposure=projected_net_exposure,
